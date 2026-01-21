@@ -2,95 +2,77 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* ECG Cyber-Medical Design System - Dark futuristic biomedical theme */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Core dark theme */
+    --background: 220 20% 6%;
+    --foreground: 180 100% 95%;
+    
+    /* Card surfaces with subtle depth */
+    --card: 220 25% 9%;
+    --card-foreground: 180 100% 95%;
+    
+    /* Popover surfaces */
+    --popover: 220 25% 8%;
+    --popover-foreground: 180 100% 95%;
+    
+    /* Primary - Cyan/Teal neon */
+    --primary: 180 100% 50%;
+    --primary-foreground: 220 20% 6%;
+    
+    /* Secondary - Deep blue */
+    --secondary: 220 40% 15%;
+    --secondary-foreground: 180 100% 90%;
+    
+    /* Muted surfaces */
+    --muted: 220 30% 12%;
+    --muted-foreground: 180 20% 60%;
+    
+    /* Accent - Magenta */
+    --accent: 300 100% 60%;
+    --accent-foreground: 220 20% 6%;
+    
+    /* Destructive - Warning red */
+    --destructive: 0 100% 55%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Borders and inputs */
+    --border: 180 40% 20%;
+    --input: 220 30% 15%;
+    --ring: 180 100% 50%;
+    
+    --radius: 0.75rem;
+    
+    /* Risk level colors */
+    --risk-low: 145 80% 45%;
+    --risk-moderate: 45 100% 50%;
+    --risk-high: 0 100% 55%;
+    
+    /* ECG waveform colors */
+    --ecg-primary: 180 100% 60%;
+    --ecg-secondary: 300 100% 65%;
+    --ecg-grid: 180 50% 15%;
+    
+    /* Glow effects */
+    --glow-primary: 180 100% 50%;
+    --glow-accent: 300 100% 60%;
+    --glow-success: 145 80% 45%;
+    --glow-warning: 45 100% 50%;
+    --glow-danger: 0 100% 55%;
+    
+    /* Sidebar */
+    --sidebar-background: 220 25% 7%;
+    --sidebar-foreground: 180 100% 90%;
+    --sidebar-primary: 180 100% 50%;
+    --sidebar-primary-foreground: 220 20% 6%;
+    --sidebar-accent: 220 30% 12%;
+    --sidebar-accent-foreground: 180 100% 90%;
+    --sidebar-border: 180 40% 15%;
+    --sidebar-ring: 180 100% 50%;
   }
 }
 
@@ -98,8 +80,190 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
+  
   body {
     @apply bg-background text-foreground;
+    font-family: 'JetBrains Mono', monospace;
   }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', sans-serif;
+  }
+}
+
+@layer utilities {
+  /* Neon glow effects */
+  .glow-primary {
+    box-shadow: 
+      0 0 5px hsl(var(--glow-primary) / 0.5),
+      0 0 20px hsl(var(--glow-primary) / 0.3),
+      0 0 40px hsl(var(--glow-primary) / 0.1);
+  }
+  
+  .glow-accent {
+    box-shadow: 
+      0 0 5px hsl(var(--glow-accent) / 0.5),
+      0 0 20px hsl(var(--glow-accent) / 0.3),
+      0 0 40px hsl(var(--glow-accent) / 0.1);
+  }
+  
+  .glow-success {
+    box-shadow: 
+      0 0 5px hsl(var(--glow-success) / 0.5),
+      0 0 20px hsl(var(--glow-success) / 0.3);
+  }
+  
+  .glow-warning {
+    box-shadow: 
+      0 0 5px hsl(var(--glow-warning) / 0.5),
+      0 0 20px hsl(var(--glow-warning) / 0.3);
+  }
+  
+  .glow-danger {
+    box-shadow: 
+      0 0 5px hsl(var(--glow-danger) / 0.5),
+      0 0 20px hsl(var(--glow-danger) / 0.3);
+  }
+  
+  /* Text glow */
+  .text-glow-primary {
+    text-shadow: 
+      0 0 10px hsl(var(--glow-primary) / 0.8),
+      0 0 30px hsl(var(--glow-primary) / 0.4);
+  }
+  
+  .text-glow-accent {
+    text-shadow: 
+      0 0 10px hsl(var(--glow-accent) / 0.8),
+      0 0 30px hsl(var(--glow-accent) / 0.4);
+  }
+  
+  /* Gradient backgrounds */
+  .gradient-cyber {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--background)) 0%,
+      hsl(220 25% 10%) 50%,
+      hsl(var(--background)) 100%
+    );
+  }
+  
+  .gradient-card {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card)) 0%,
+      hsl(220 30% 7%) 100%
+    );
+  }
+  
+  /* Border glow animation */
+  .border-glow {
+    position: relative;
+  }
+  
+  .border-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      45deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--accent)) 50%,
+      hsl(var(--primary)) 100%
+    );
+    z-index: -1;
+    opacity: 0.5;
+    animation: border-pulse 3s ease-in-out infinite;
+  }
+  
+  @keyframes border-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+  }
+  
+  /* ECG grid pattern */
+  .ecg-grid {
+    background-image: 
+      linear-gradient(hsl(var(--ecg-grid)) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--ecg-grid)) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  
+  /* Heartbeat animation */
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    14% { transform: scale(1.15); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.1); }
+    56% { transform: scale(1); }
+  }
+  
+  .animate-heartbeat {
+    animation: heartbeat 1.5s ease-in-out infinite;
+  }
+  
+  /* Pulse ring animation */
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.8);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1.4);
+      opacity: 0;
+    }
+  }
+  
+  .animate-pulse-ring {
+    animation: pulse-ring 1.5s ease-out infinite;
+  }
+  
+  /* ECG scan line */
+  @keyframes ecg-scan {
+    0% { left: 0%; }
+    100% { left: 100%; }
+  }
+  
+  .ecg-scan-line {
+    position: absolute;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      hsl(var(--primary)) 50%,
+      transparent 100%
+    );
+    animation: ecg-scan 4s linear infinite;
+  }
+  
+  /* Fade in animation */
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+  }
+  
+  /* Stagger children animation */
+  .stagger-children > * {
+    opacity: 0;
+    animation: fade-in-up 0.4s ease-out forwards;
+  }
+  
+  .stagger-children > *:nth-child(1) { animation-delay: 0.1s; }
+  .stagger-children > *:nth-child(2) { animation-delay: 0.2s; }
+  .stagger-children > *:nth-child(3) { animation-delay: 0.3s; }
+  .stagger-children > *:nth-child(4) { animation-delay: 0.4s; }
+  .stagger-children > *:nth-child(5) { animation-delay: 0.5s; }
+  .stagger-children > *:nth-child(6) { animation-delay: 0.6s; }
 }
