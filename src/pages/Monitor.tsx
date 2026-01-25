@@ -19,7 +19,7 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
   
-  const { data, metrics, classification, riskLevel, resetData } = useECGSimulation(isRecording);
+  const { data, peaks, metrics, classification, riskLevel, resetData } = useECGSimulation(isRecording);
 
   // Session timer
   useState(() => {
@@ -127,7 +127,7 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
           <div className="xl:col-span-3 space-y-6">
             {/* Waveform Display */}
             <div className="rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 h-[400px]">
-              <ECGWaveform data={data} riskLevel={riskLevel} />
+              <ECGWaveform data={data} peaks={peaks} riskLevel={riskLevel} showPeaks={true} />
             </div>
 
             {/* Metrics Grid */}
