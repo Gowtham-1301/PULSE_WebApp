@@ -8,6 +8,7 @@ import RiskIndicator from '@/components/ecg/RiskIndicator';
 import ClassificationPanel from '@/components/ecg/ClassificationPanel';
 import SuggestionsPanel from '@/components/ecg/SuggestionsPanel';
 import HeartRateGauge from '@/components/ecg/HeartRateGauge';
+import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
 
 interface MonitorProps {
@@ -217,6 +218,23 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
                 </div>
               </div>
             </div>
+
+            {/* AI Health Insights */}
+            <AIHealthInsights
+              metrics={{
+                heartRate: metrics.heartRate,
+                rrInterval: metrics.rrInterval,
+                qrsDuration: metrics.qrsDuration,
+                qtInterval: metrics.qtInterval,
+                hrvSdnn: metrics.hrvSdnn,
+                hrvRmssd: metrics.hrvRmssd,
+              }}
+              classification={{
+                label: classification.label,
+                confidence: classification.confidence,
+              }}
+              riskLevel={riskLevel}
+            />
 
             {/* Model Info */}
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
