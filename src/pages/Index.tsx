@@ -4,8 +4,11 @@ import AuthForm from '@/components/auth/AuthForm';
 import Dashboard from '@/pages/Dashboard';
 import Monitor from '@/pages/Monitor';
 import History from '@/pages/History';
+import Profile from '@/pages/Profile';
+import Reports from '@/pages/Reports';
+import Settings from '@/pages/Settings';
 
-type Page = 'auth' | 'dashboard' | 'monitor' | 'history' | 'profile' | 'settings';
+type Page = 'auth' | 'dashboard' | 'monitor' | 'history' | 'profile' | 'reports' | 'settings';
 
 const AppContent = () => {
   const { user, loading } = useAuth();
@@ -43,6 +46,12 @@ const AppContent = () => {
       return <Monitor onNavigate={handleNavigate} />;
     case 'history':
       return <History onNavigate={handleNavigate} />;
+    case 'profile':
+      return <Profile onNavigate={handleNavigate} />;
+    case 'reports':
+      return <Reports onNavigate={handleNavigate} />;
+    case 'settings':
+      return <Settings onNavigate={handleNavigate} />;
     case 'dashboard':
     default:
       return <Dashboard onNavigate={handleNavigate} />;

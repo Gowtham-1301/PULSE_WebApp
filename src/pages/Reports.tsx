@@ -1,7 +1,14 @@
 import { useState, useEffect } from 'react';
-import { FileText, Download, Calendar, TrendingUp, ArrowRight, Loader2 } from 'lucide-react';
+import { FileText, Download, Calendar, TrendingUp, ArrowRight, Loader2, FileDown, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import Header from '@/components/layout/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +36,7 @@ interface ECGSession {
   confidence_score: number | null;
   risk_level: string | null;
   suggestions: string[] | null;
+  notes: string | null;
 }
 
 const Reports = ({ onNavigate }: ReportsProps) => {
@@ -39,6 +47,8 @@ const Reports = ({ onNavigate }: ReportsProps) => {
   const [selectedSession, setSelectedSession] = useState<string>('');
   const [comparisonSessions, setComparisonSessions] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportingSessionId, setExportingSessionId] = useState<string | null>(null);
+  const [previewSession, setPreviewSession] = useState<ECGSession | null>(null);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -98,26 +108,27 @@ const Reports = ({ onNavigate }: ReportsProps) => {
       classification: {
         label: session.classification || 'Normal Sinus Rhythm',
         confidence: session.confidence_score || 94,
-        details: 'AI-analyzed cardiac rhythm classification',
+        details: session.notes || 'AI-analyzed cardiac rhythm classification',
       },
       riskLevel: (session.risk_level as 'low' | 'moderate' | 'high') || 'low',
       suggestions: session.suggestions || [],
     };
   };
 
-  const handleExportSession = async () => {
-    if (!selectedSession) return;
+  const handleExportSession = async (sessionId?: string) => {
+    const targetId = sessionId || selectedSession;
+    if (!targetId) return;
 
-    const session = sessions.find(s => s.id === selectedSession);
+    const session = sessions.find(s => s.id === targetId);
     if (!session) return;
 
-    setIsExporting(true);
+    setExportingSessionId(targetId);
     try {
       const report = convertToSessionReport(session);
       await generateSessionPDF(report);
       toast({
-        title: 'Report Exported',
-        description: 'Your ECG session report has been downloaded.',
+        title: 'Report Downloaded',
+        description: `ECG report for ${session.session_name || 'session'} has been downloaded.`,
       });
     } catch (error) {
       console.error('Export error:', error);
@@ -127,7 +138,7 @@ const Reports = ({ onNavigate }: ReportsProps) => {
         description: 'Failed to generate PDF report.',
       });
     } finally {
-      setIsExporting(false);
+      setExportingSessionId(null);
     }
   };
 
@@ -154,7 +165,7 @@ const Reports = ({ onNavigate }: ReportsProps) => {
 
       await generateComparisonPDF(comparison);
       toast({
-        title: 'Comparison Report Exported',
+        title: 'Comparison Report Downloaded',
         description: 'Your comparison report has been downloaded.',
       });
     } catch (error) {
@@ -187,6 +198,15 @@ const Reports = ({ onNavigate }: ReportsProps) => {
 
   const getSelectedSessionDetails = () => {
     return sessions.find(s => s.id === selectedSession);
+  };
+
+  const formatDuration = (startTime: string, endTime: string | null) => {
+    const start = new Date(startTime);
+    const end = endTime ? new Date(endTime) : new Date();
+    const durationMs = end.getTime() - start.getTime();
+    const mins = Math.floor(durationMs / 60000);
+    const secs = Math.floor((durationMs % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   if (isLoading) {
@@ -269,12 +289,22 @@ const Reports = ({ onNavigate }: ReportsProps) => {
                         <span>{new Date(getSelectedSessionDetails()!.start_time).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Duration</span>
+                        <span className="font-mono">
+                          {formatDuration(getSelectedSessionDetails()!.start_time, getSelectedSessionDetails()!.end_time)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Heart Rate</span>
                         <span>{getSelectedSessionDetails()!.heart_rate_avg || '--'} BPM</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Classification</span>
                         <span className="text-primary">{getSelectedSessionDetails()!.classification || 'Normal'}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Confidence</span>
+                        <span>{(getSelectedSessionDetails()!.confidence_score || 0).toFixed(1)}%</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Risk Level</span>
@@ -289,16 +319,16 @@ const Reports = ({ onNavigate }: ReportsProps) => {
                   )}
 
                   <Button
-                    onClick={handleExportSession}
-                    disabled={!selectedSession || isExporting}
+                    onClick={() => handleExportSession()}
+                    disabled={!selectedSession || exportingSessionId === selectedSession}
                     className="w-full bg-primary hover:bg-primary/90"
                   >
-                    {isExporting ? (
+                    {exportingSessionId === selectedSession ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <Download className="w-4 h-4 mr-2" />
                     )}
-                    Export Session PDF
+                    Download Session PDF
                   </Button>
                 </div>
               </div>
@@ -341,7 +371,7 @@ const Reports = ({ onNavigate }: ReportsProps) => {
                                   {session.session_name || 'Session'}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {new Date(session.start_time).toLocaleDateString()}
+                                  {new Date(session.start_time).toLocaleDateString()} • {session.heart_rate_avg || '--'} BPM
                                 </p>
                               </div>
                             </div>
@@ -371,23 +401,28 @@ const Reports = ({ onNavigate }: ReportsProps) => {
                     ) : (
                       <Download className="w-4 h-4 mr-2" />
                     )}
-                    Export Comparison PDF
+                    Download Comparison PDF
                   </Button>
                 </div>
               </div>
 
-              {/* Recent Sessions List */}
+              {/* Recent Sessions List with Quick Download */}
               <div className="lg:col-span-2 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-6">
-                <div className="flex items-center gap-3 mb-6">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  <h3 className="font-display font-semibold text-lg">Recent Sessions</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <h3 className="font-display font-semibold text-lg">Recent Sessions</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{sessions.length} total sessions</p>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="text-left text-sm text-muted-foreground border-b border-border/30">
+                        <th className="pb-3 pr-4">Session</th>
                         <th className="pb-3 pr-4">Date</th>
+                        <th className="pb-3 pr-4">Duration</th>
                         <th className="pb-3 pr-4">Heart Rate</th>
                         <th className="pb-3 pr-4">Classification</th>
                         <th className="pb-3 pr-4">Risk</th>
@@ -395,10 +430,16 @@ const Reports = ({ onNavigate }: ReportsProps) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {sessions.slice(0, 10).map((session) => (
+                      {sessions.map((session) => (
                         <tr key={session.id} className="border-b border-border/20 hover:bg-muted/20">
-                          <td className="py-3 pr-4 text-sm">
+                          <td className="py-3 pr-4 text-sm font-medium">
+                            {session.session_name || 'ECG Session'}
+                          </td>
+                          <td className="py-3 pr-4 text-sm text-muted-foreground">
                             {new Date(session.start_time).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 pr-4 text-sm font-mono">
+                            {formatDuration(session.start_time, session.end_time)}
                           </td>
                           <td className="py-3 pr-4 text-sm font-mono">
                             {session.heart_rate_avg || '--'} BPM
@@ -416,16 +457,31 @@ const Reports = ({ onNavigate }: ReportsProps) => {
                             </span>
                           </td>
                           <td className="py-3">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setSelectedSession(session.id);
-                                handleExportSession();
-                              }}
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setPreviewSession(session)}
+                                className="h-8 w-8 p-0"
+                                title="Preview"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleExportSession(session.id)}
+                                disabled={exportingSessionId === session.id}
+                                className="h-8 w-8 p-0"
+                                title="Download PDF"
+                              >
+                                {exportingSessionId === session.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <FileDown className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -437,6 +493,104 @@ const Reports = ({ onNavigate }: ReportsProps) => {
           )}
         </div>
       </main>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewSession} onOpenChange={() => setPreviewSession(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Session Details
+            </DialogTitle>
+            <DialogDescription>
+              {previewSession?.session_name || 'ECG Session'} - {previewSession && new Date(previewSession.start_time).toLocaleString()}
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewSession && (
+            <div className="space-y-6">
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <p className="text-xs text-muted-foreground">Heart Rate (Avg)</p>
+                  <p className="text-lg font-mono font-bold text-primary">{previewSession.heart_rate_avg || '--'} <span className="text-xs">BPM</span></p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <p className="text-xs text-muted-foreground">Heart Rate (Min/Max)</p>
+                  <p className="text-lg font-mono font-bold">{previewSession.heart_rate_min || '--'}/{previewSession.heart_rate_max || '--'}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <p className="text-xs text-muted-foreground">HRV SDNN</p>
+                  <p className="text-lg font-mono font-bold">{previewSession.hrv_sdnn?.toFixed(1) || '--'} <span className="text-xs">ms</span></p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <p className="text-xs text-muted-foreground">HRV RMSSD</p>
+                  <p className="text-lg font-mono font-bold">{previewSession.hrv_rmssd?.toFixed(1) || '--'} <span className="text-xs">ms</span></p>
+                </div>
+              </div>
+
+              {/* Classification */}
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/30">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold">AI Classification</p>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    previewSession.risk_level === 'low' ? 'bg-risk-low/20 text-risk-low' :
+                    previewSession.risk_level === 'moderate' ? 'bg-risk-moderate/20 text-risk-moderate' :
+                    'bg-risk-high/20 text-risk-high'
+                  }`}>
+                    {(previewSession.risk_level || 'low').toUpperCase()} RISK
+                  </span>
+                </div>
+                <p className="text-xl font-display font-bold text-primary">{previewSession.classification || 'Normal Sinus Rhythm'}</p>
+                <p className="text-sm text-muted-foreground mt-1">Confidence: {(previewSession.confidence_score || 0).toFixed(1)}%</p>
+              </div>
+
+              {/* Interval Metrics */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 rounded-lg bg-muted/20">
+                  <p className="text-xs text-muted-foreground">RR Interval</p>
+                  <p className="font-mono">{previewSession.rr_interval_avg?.toFixed(3) || '--'} sec</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/20">
+                  <p className="text-xs text-muted-foreground">QRS Duration</p>
+                  <p className="font-mono">{previewSession.qrs_duration_avg?.toFixed(3) || '--'} sec</p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-muted/20">
+                  <p className="text-xs text-muted-foreground">QT Interval</p>
+                  <p className="font-mono">{previewSession.qt_interval_avg?.toFixed(3) || '--'} sec</p>
+                </div>
+              </div>
+
+              {/* Suggestions */}
+              {previewSession.suggestions && previewSession.suggestions.length > 0 && (
+                <div>
+                  <p className="text-sm font-semibold mb-2">Recommendations</p>
+                  <ul className="space-y-1">
+                    {previewSession.suggestions.map((suggestion, idx) => (
+                      <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="text-primary mt-1">•</span>
+                        {suggestion}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Download Button */}
+              <Button
+                onClick={() => {
+                  handleExportSession(previewSession.id);
+                  setPreviewSession(null);
+                }}
+                className="w-full"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download Full PDF Report
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
