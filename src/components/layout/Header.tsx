@@ -46,6 +46,7 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
             { id: 'dashboard', label: 'Dashboard' },
             { id: 'monitor', label: 'Live Monitor' },
             { id: 'history', label: 'History' },
+            { id: 'reports', label: 'Reports' },
           ].map((item) => (
             <Button
               key={item.id}
