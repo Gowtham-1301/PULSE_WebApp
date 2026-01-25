@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { RealtimePeakDetector, Peak } from '@/lib/peakDetection';
 
 interface ECGDataPoint {
   time: number;
@@ -42,8 +43,32 @@ const generateECGPoint = (t: number, baseRate: number = 72): number => {
   return pWave + qWave + rWave + sWave + tWave + noise;
 };
 
+// Calculate HRV metrics from RR intervals
+const calculateHRV = (rrIntervals: number[]): { sdnn: number; rmssd: number } => {
+  if (rrIntervals.length < 2) {
+    return { sdnn: 45, rmssd: 35 };
+  }
+  
+  // SDNN: Standard deviation of NN intervals
+  const mean = rrIntervals.reduce((a, b) => a + b, 0) / rrIntervals.length;
+  const squaredDiffs = rrIntervals.map(rr => Math.pow(rr - mean, 2));
+  const sdnn = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / rrIntervals.length) * 1000; // Convert to ms
+  
+  // RMSSD: Root mean square of successive differences
+  const successiveDiffs: number[] = [];
+  for (let i = 1; i < rrIntervals.length; i++) {
+    successiveDiffs.push(Math.pow(rrIntervals[i] - rrIntervals[i - 1], 2));
+  }
+  const rmssd = successiveDiffs.length > 0 
+    ? Math.sqrt(successiveDiffs.reduce((a, b) => a + b, 0) / successiveDiffs.length) * 1000 
+    : 35;
+  
+  return { sdnn, rmssd };
+};
+
 export const useECGSimulation = (isRecording: boolean = false) => {
   const [data, setData] = useState<ECGDataPoint[]>([]);
+  const [peaks, setPeaks] = useState<Peak[]>([]);
   const [metrics, setMetrics] = useState<ECGMetrics>({
     heartRate: 72,
     rrInterval: 0.833,
@@ -62,55 +87,9 @@ export const useECGSimulation = (isRecording: boolean = false) => {
   const timeRef = useRef(0);
   const heartRateRef = useRef(72);
   const animationRef = useRef<number>();
+  const peakDetectorRef = useRef<RealtimePeakDetector>(new RealtimePeakDetector(250, 5));
   
-  // Simulate natural heart rate variations
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Simulate small heart rate fluctuations
-      const variation = (Math.random() - 0.5) * 4;
-      heartRateRef.current = Math.max(60, Math.min(100, heartRateRef.current + variation));
-      
-      const hr = heartRateRef.current;
-      const rrInterval = 60 / hr;
-      
-      setMetrics({
-        heartRate: Math.round(hr),
-        rrInterval: parseFloat(rrInterval.toFixed(3)),
-        qrsDuration: 0.08 + (Math.random() - 0.5) * 0.01,
-        qtInterval: 0.36 + (Math.random() - 0.5) * 0.02,
-        hrvSdnn: 40 + Math.random() * 20,
-        hrvRmssd: 30 + Math.random() * 15,
-      });
-      
-      // Update classification based on heart rate
-      if (hr < 60) {
-        setClassification({
-          label: 'Sinus Bradycardia',
-          confidence: 89 + Math.random() * 5,
-          details: 'Slower than normal heart rate, regular rhythm',
-        });
-        setRiskLevel('moderate');
-      } else if (hr > 100) {
-        setClassification({
-          label: 'Sinus Tachycardia',
-          confidence: 87 + Math.random() * 6,
-          details: 'Faster than normal heart rate, regular rhythm',
-        });
-        setRiskLevel('moderate');
-      } else {
-        setClassification({
-          label: 'Normal Sinus Rhythm',
-          confidence: 92 + Math.random() * 6,
-          details: 'Regular rhythm with consistent P-QRS-T morphology',
-        });
-        setRiskLevel('low');
-      }
-    }, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
-  
-  // Generate real-time ECG data
+  // Generate real-time ECG data with peak detection
   useEffect(() => {
     if (!isRecording) return;
     
@@ -120,12 +99,60 @@ export const useECGSimulation = (isRecording: boolean = false) => {
       const duration = 0.016; // ~60fps frame time
       const samples = Math.floor(samplingRate * duration);
       
+      // Simulate small heart rate fluctuations
+      const variation = (Math.random() - 0.5) * 0.5;
+      heartRateRef.current = Math.max(55, Math.min(110, heartRateRef.current + variation));
+      
       for (let i = 0; i < samples; i++) {
         timeRef.current += 1 / samplingRate;
         newPoints.push({
           time: timeRef.current,
           value: generateECGPoint(timeRef.current, heartRateRef.current),
         });
+      }
+      
+      // Real-time peak detection
+      const peakResult = peakDetectorRef.current.addData(newPoints);
+      setPeaks(peakResult.peaks);
+      
+      // Update metrics from peak detection
+      if (peakResult.avgHR > 0) {
+        const hrv = calculateHRV(peakResult.rrIntervals);
+        const hr = peakResult.avgHR;
+        const rrInterval = peakResult.rrIntervals[peakResult.rrIntervals.length - 1] || 60 / hr;
+        
+        setMetrics({
+          heartRate: Math.round(hr),
+          rrInterval: parseFloat(rrInterval.toFixed(3)),
+          qrsDuration: 0.08 + (Math.random() - 0.5) * 0.01,
+          qtInterval: 0.36 + (Math.random() - 0.5) * 0.02,
+          hrvSdnn: hrv.sdnn,
+          hrvRmssd: hrv.rmssd,
+        });
+        
+        // Update classification based on heart rate
+        if (hr < 60) {
+          setClassification({
+            label: 'Sinus Bradycardia',
+            confidence: 89 + Math.random() * 5,
+            details: 'Slower than normal heart rate, regular rhythm',
+          });
+          setRiskLevel('moderate');
+        } else if (hr > 100) {
+          setClassification({
+            label: 'Sinus Tachycardia',
+            confidence: 87 + Math.random() * 6,
+            details: 'Faster than normal heart rate, regular rhythm',
+          });
+          setRiskLevel('moderate');
+        } else {
+          setClassification({
+            label: 'Normal Sinus Rhythm',
+            confidence: 92 + Math.random() * 6,
+            details: 'Regular rhythm with consistent P-QRS-T morphology',
+          });
+          setRiskLevel('low');
+        }
       }
       
       setData(prev => {
@@ -148,14 +175,19 @@ export const useECGSimulation = (isRecording: boolean = false) => {
   
   const resetData = useCallback(() => {
     timeRef.current = 0;
+    heartRateRef.current = 72;
     setData([]);
+    setPeaks([]);
+    peakDetectorRef.current.reset();
   }, []);
   
   return {
     data,
+    peaks,
     metrics,
     classification,
     riskLevel,
     resetData,
   };
 };
+
