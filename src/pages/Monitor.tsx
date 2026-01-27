@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Download, Heart, Save, Loader2, FileText } from 'lucide-react';
+import { Play, Pause, RotateCcw, Download, Heart, Save, Loader2, FileText, Activity, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import ClassificationPanel from '@/components/ecg/ClassificationPanel';
 import SuggestionsPanel from '@/components/ecg/SuggestionsPanel';
 import HeartRateGauge from '@/components/ecg/HeartRateGauge';
 import AIHealthInsights from '@/components/ecg/AIHealthInsights';
+import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +34,7 @@ interface MonitorProps {
 const Monitor = ({ onNavigate }: MonitorProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'realtime' | 'upload'>('realtime');
   const [isRecording, setIsRecording] = useState(false);
   const [sessionDuration, setSessionDuration] = useState(0);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -260,77 +263,94 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
                   <div className="absolute inset-0 animate-pulse-ring bg-primary/30 rounded-full" />
                 )}
               </div>
-              Live ECG Monitor
+              ECG Analysis
             </h2>
             <p className="text-muted-foreground mt-1">
-              Real-time cardiac rhythm visualization and analysis
+              Real-time monitoring or upload CSV files for offline analysis
             </p>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-3">
-            <div className="px-4 py-2 rounded-lg bg-muted/50 border border-border/50 font-mono text-lg">
-              {formatDuration(sessionDuration)}
-            </div>
-            
-            <Button
-              onClick={handleStartStop}
-              className={`${
-                isRecording
-                  ? 'bg-destructive hover:bg-destructive/90'
-                  : 'bg-primary hover:bg-primary/90 glow-primary'
-              } font-display font-semibold px-6`}
-            >
-              {isRecording ? (
-                <>
-                  <Pause className="w-4 h-4 mr-2" />
-                  Stop
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  Start
-                </>
-              )}
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className="border-border/50"
-              title="Reset"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={() => setShowSaveDialog(true)}
-              disabled={data.length === 0}
-              className="border-border/50"
-              title="Save Session"
-            >
-              <Save className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={handleExportPDF}
-              disabled={data.length === 0 || isExporting}
-              className="border-border/50"
-              title="Download PDF Report"
-            >
-              {isExporting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <FileText className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
+          {/* Mode Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'realtime' | 'upload')} className="w-auto">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+              <TabsTrigger value="realtime" className="flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                Real-time
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Upload CSV
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        {/* Real-time Mode */}
+        {activeTab === 'realtime' && (
+          <>
+            {/* Controls */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="px-4 py-2 rounded-lg bg-muted/50 border border-border/50 font-mono text-lg">
+                {formatDuration(sessionDuration)}
+              </div>
+              
+              <Button
+                onClick={handleStartStop}
+                className={`${
+                  isRecording
+                    ? 'bg-destructive hover:bg-destructive/90'
+                    : 'bg-primary hover:bg-primary/90 glow-primary'
+                } font-display font-semibold px-6`}
+              >
+                {isRecording ? (
+                  <>
+                    <Pause className="w-4 h-4 mr-2" />
+                    Stop
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Start
+                  </>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="border-border/50"
+                title="Reset"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setShowSaveDialog(true)}
+                disabled={data.length === 0}
+                className="border-border/50"
+                title="Save Session"
+              >
+                <Save className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleExportPDF}
+                disabled={data.length === 0 || isExporting}
+                className="border-border/50"
+                title="Download PDF Report"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* Main Grid - Real-time Mode */}
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* ECG Waveform - Main Area */}
           <div className="xl:col-span-3 space-y-6">
             {/* Waveform Display */}
@@ -460,6 +480,15 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
             </div>
           </div>
         </div>
+          </>
+        )}
+
+        {/* CSV Upload Mode */}
+        {activeTab === 'upload' && (
+          <div className="rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-6">
+            <CSVUploadAnalysis />
+          </div>
+        )}
       </main>
 
       {/* Save Session Dialog */}

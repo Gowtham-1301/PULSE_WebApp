@@ -21,26 +21,38 @@ interface ECGClassification {
   details: string;
 }
 
-// Simulated ECG waveform generator
+// Simulated ECG waveform generator with cleaner signal
 const generateECGPoint = (t: number, baseRate: number = 72): number => {
   const beatInterval = 60 / baseRate;
   const phase = (t % beatInterval) / beatInterval;
   
-  // P wave (atrial depolarization)
-  const pWave = 0.15 * Math.exp(-Math.pow((phase - 0.1) / 0.02, 2));
+  // Baseline (isoelectric line)
+  let value = 0;
   
-  // QRS complex (ventricular depolarization)
-  const qWave = -0.1 * Math.exp(-Math.pow((phase - 0.2) / 0.008, 2));
-  const rWave = 1.2 * Math.exp(-Math.pow((phase - 0.22) / 0.012, 2));
-  const sWave = -0.2 * Math.exp(-Math.pow((phase - 0.24) / 0.008, 2));
+  // P wave (atrial depolarization) - small, rounded bump
+  value += 0.12 * Math.exp(-Math.pow((phase - 0.10) / 0.025, 2));
   
-  // T wave (ventricular repolarization)
-  const tWave = 0.25 * Math.exp(-Math.pow((phase - 0.35) / 0.04, 2));
+  // PR segment (flat)
   
-  // Add slight noise for realism
-  const noise = (Math.random() - 0.5) * 0.02;
+  // Q wave (small negative deflection)
+  value += -0.08 * Math.exp(-Math.pow((phase - 0.19) / 0.008, 2));
   
-  return pWave + qWave + rWave + sWave + tWave + noise;
+  // R wave (tall, sharp positive peak) - THE MAIN PEAK
+  value += 1.0 * Math.exp(-Math.pow((phase - 0.21) / 0.010, 2));
+  
+  // S wave (negative deflection after R)
+  value += -0.15 * Math.exp(-Math.pow((phase - 0.23) / 0.008, 2));
+  
+  // ST segment (slightly elevated or flat)
+  value += 0.02 * Math.exp(-Math.pow((phase - 0.28) / 0.03, 2));
+  
+  // T wave (repolarization - broader, lower amplitude)
+  value += 0.20 * Math.exp(-Math.pow((phase - 0.38) / 0.045, 2));
+  
+  // Very minimal noise (realistic but not overwhelming)
+  const noise = (Math.random() - 0.5) * 0.008;
+  
+  return value + noise;
 };
 
 // Calculate HRV metrics from RR intervals
