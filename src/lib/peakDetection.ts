@@ -67,7 +67,7 @@ const movingWindowIntegration = (data: number[], windowSize: number = 30): numbe
   return result;
 };
 
-// Adaptive thresholding for peak detection
+// Improved adaptive thresholding for peak detection with noise rejection
 const findPeaks = (
   processedSignal: number[],
   originalSignal: number[],
@@ -75,45 +75,58 @@ const findPeaks = (
   sampleRate: number = 250
 ): Peak[] => {
   const peaks: Peak[] = [];
-  const refractoryPeriod = Math.floor(0.2 * sampleRate); // 200ms refractory period
+  const refractoryPeriod = Math.floor(0.25 * sampleRate); // 250ms refractory period (min 240 BPM)
+  const minPeakDistance = Math.floor(0.3 * sampleRate); // Minimum 300ms between peaks
   
-  // Calculate adaptive threshold
-  const maxVal = Math.max(...processedSignal);
-  let threshold = 0.3 * maxVal;
+  if (processedSignal.length < 10) return peaks;
+  
+  // Calculate robust threshold using percentile instead of just max
+  const sortedSignal = [...processedSignal].sort((a, b) => b - a);
+  const percentile95 = sortedSignal[Math.floor(sortedSignal.length * 0.05)] || 0;
+  const maxVal = sortedSignal[0] || 0;
+  
+  // More conservative threshold
+  let threshold = Math.max(0.4 * maxVal, 0.5 * percentile95);
+  const minThreshold = 0.1 * maxVal; // Never go below 10% of max
   
   let lastPeakIndex = -refractoryPeriod;
   
-  for (let i = 1; i < processedSignal.length - 1; i++) {
-    // Check if it's a local maximum and above threshold
-    if (
+  for (let i = 2; i < processedSignal.length - 2; i++) {
+    // Stronger local maximum check (compare with neighbors on both sides)
+    const isLocalMax = 
       processedSignal[i] > processedSignal[i - 1] &&
+      processedSignal[i] > processedSignal[i - 2] &&
       processedSignal[i] > processedSignal[i + 1] &&
-      processedSignal[i] > threshold &&
-      i - lastPeakIndex >= refractoryPeriod
-    ) {
+      processedSignal[i] > processedSignal[i + 2];
+    
+    // Must be above threshold and respect refractory period
+    if (isLocalMax && processedSignal[i] > threshold && i - lastPeakIndex >= refractoryPeriod) {
       // Find the actual R-peak in the original signal (within a small window)
-      const searchStart = Math.max(0, i - 10);
-      const searchEnd = Math.min(originalSignal.length - 1, i + 10);
+      const searchStart = Math.max(0, i - 8);
+      const searchEnd = Math.min(originalSignal.length - 1, i + 8);
       let maxIdx = i;
-      let maxVal = originalSignal[i] || 0;
+      let peakVal = originalSignal[i] || 0;
       
       for (let j = searchStart; j <= searchEnd; j++) {
-        if (originalSignal[j] !== undefined && originalSignal[j] > maxVal) {
-          maxVal = originalSignal[j];
+        if (originalSignal[j] !== undefined && originalSignal[j] > peakVal) {
+          peakVal = originalSignal[j];
           maxIdx = j;
         }
       }
       
-      peaks.push({
-        time: times[maxIdx] || 0,
-        value: maxVal,
-        index: maxIdx,
-      });
-      
-      lastPeakIndex = i;
-      
-      // Update threshold adaptively
-      threshold = 0.25 * processedSignal[i] + 0.75 * threshold;
+      // Only add peak if original signal value is significant (above 0.5 mV for R-wave)
+      if (peakVal > 0.4) {
+        peaks.push({
+          time: times[maxIdx] || 0,
+          value: peakVal,
+          index: maxIdx,
+        });
+        
+        lastPeakIndex = i;
+        
+        // Update threshold adaptively (learning rate)
+        threshold = Math.max(0.3 * processedSignal[i] + 0.7 * threshold, minThreshold);
+      }
     }
   }
   
