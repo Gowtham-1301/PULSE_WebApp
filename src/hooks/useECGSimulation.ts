@@ -46,22 +46,26 @@ const generateECGPoint = (t: number, baseRate: number = 72): number => {
 // Calculate HRV metrics from RR intervals
 const calculateHRV = (rrIntervals: number[]): { sdnn: number; rmssd: number } => {
   if (rrIntervals.length < 2) {
-    return { sdnn: 45, rmssd: 35 };
+    // Return -1 to indicate insufficient data, handled in UI
+    return { sdnn: -1, rmssd: -1 };
   }
   
-  // SDNN: Standard deviation of NN intervals
+  // SDNN: Standard deviation of NN intervals (in seconds, convert to ms)
   const mean = rrIntervals.reduce((a, b) => a + b, 0) / rrIntervals.length;
   const squaredDiffs = rrIntervals.map(rr => Math.pow(rr - mean, 2));
-  const sdnn = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / rrIntervals.length) * 1000; // Convert to ms
+  const variance = squaredDiffs.reduce((a, b) => a + b, 0) / rrIntervals.length;
+  const sdnn = Math.sqrt(variance) * 1000; // Convert seconds to ms
   
   // RMSSD: Root mean square of successive differences
   const successiveDiffs: number[] = [];
   for (let i = 1; i < rrIntervals.length; i++) {
-    successiveDiffs.push(Math.pow(rrIntervals[i] - rrIntervals[i - 1], 2));
+    const diff = rrIntervals[i] - rrIntervals[i - 1];
+    successiveDiffs.push(diff * diff);
   }
+  
   const rmssd = successiveDiffs.length > 0 
     ? Math.sqrt(successiveDiffs.reduce((a, b) => a + b, 0) / successiveDiffs.length) * 1000 
-    : 35;
+    : -1;
   
   return { sdnn, rmssd };
 };
@@ -121,14 +125,15 @@ export const useECGSimulation = (isRecording: boolean = false) => {
         const hr = peakResult.avgHR;
         const rrInterval = peakResult.rrIntervals[peakResult.rrIntervals.length - 1] || 60 / hr;
         
-        setMetrics({
+        // Only update HRV if we have valid values (>= 0), otherwise keep previous or use defaults
+        setMetrics(prev => ({
           heartRate: Math.round(hr),
           rrInterval: parseFloat(rrInterval.toFixed(3)),
           qrsDuration: 0.08 + (Math.random() - 0.5) * 0.01,
           qtInterval: 0.36 + (Math.random() - 0.5) * 0.02,
-          hrvSdnn: hrv.sdnn,
-          hrvRmssd: hrv.rmssd,
-        });
+          hrvSdnn: hrv.sdnn >= 0 ? parseFloat(hrv.sdnn.toFixed(1)) : prev.hrvSdnn,
+          hrvRmssd: hrv.rmssd >= 0 ? parseFloat(hrv.rmssd.toFixed(1)) : prev.hrvRmssd,
+        }));
         
         // Update classification based on heart rate
         if (hr < 60) {
