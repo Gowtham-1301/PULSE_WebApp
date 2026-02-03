@@ -21,7 +21,10 @@ import SuggestionsPanel from '@/components/ecg/SuggestionsPanel';
 import HeartRateGauge from '@/components/ecg/HeartRateGauge';
 import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
+import RiskFusionPanel from '@/components/ecg/RiskFusionPanel';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
+import { useRiskFusion } from '@/hooks/useRiskFusion';
+import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +55,32 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
   }>({ heartRates: [], rrIntervals: [], qrsDurations: [], qtIntervals: [], hrvSdnns: [], hrvRmssds: [] });
   
   const { data, peaks, metrics, classification, riskLevel, resetData } = useECGSimulation(isRecording);
+  const { result: riskFusionResult, isLoading: isCalculatingRisk, calculateRisk } = useRiskFusion();
+  const { getClinicalProfile, getCompleteness } = useProfile();
+
+  // Calculate fused risk when metrics stabilize (every 10 seconds during recording)
+  useEffect(() => {
+    if (!isRecording || sessionDuration === 0 || sessionDuration % 10 !== 0) return;
+    if (metrics.heartRate === 0) return;
+
+    const clinicalProfile = getClinicalProfile();
+    calculateRisk({
+      ecgMetrics: {
+        heartRate: metrics.heartRate,
+        rrInterval: metrics.rrInterval,
+        qrsDuration: metrics.qrsDuration,
+        qtInterval: metrics.qtInterval,
+        hrvSdnn: metrics.hrvSdnn,
+        hrvRmssd: metrics.hrvRmssd,
+      },
+      ecgClassification: {
+        label: classification.label,
+        confidence: classification.confidence,
+      },
+      clinicalProfile,
+      isLiveMonitoring: true,
+    });
+  }, [isRecording, sessionDuration, metrics, classification, getClinicalProfile, calculateRisk]);
 
   // Session timer
   useEffect(() => {
@@ -467,6 +496,30 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
               }}
               riskLevel={riskLevel}
             />
+
+            {/* Risk Fusion Panel */}
+            <RiskFusionPanel 
+              result={riskFusionResult} 
+              isLoading={isCalculatingRisk} 
+            />
+
+            {/* Profile Completeness Hint */}
+            {getCompleteness().clinical < 50 && (
+              <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
+                <h4 className="font-display font-semibold text-sm mb-2 text-accent">
+                  Improve Risk Analysis
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Complete your clinical profile (BP, cholesterol, lifestyle) for more accurate risk fusion.
+                </p>
+                <button 
+                  onClick={() => onNavigate('profile')}
+                  className="text-xs text-primary mt-2 hover:underline"
+                >
+                  Complete Profile →
+                </button>
+              </div>
+            )}
 
             {/* Model Info */}
             <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">

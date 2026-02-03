@@ -84,12 +84,23 @@ export type Database = {
         Row: {
           age: number | null
           allergies: string[] | null
+          blood_pressure_diastolic: number | null
+          blood_pressure_systolic: number | null
           bmi: number | null
+          cholesterol_hdl: number | null
+          cholesterol_ldl: number | null
+          cholesterol_total: number | null
           created_at: string
+          diabetes_status: string | null
+          exercise_frequency: string | null
+          family_heart_disease: boolean | null
+          fasting_blood_sugar: number | null
           full_name: string | null
           health_conditions: string[] | null
           height: number | null
           id: string
+          medications: string[] | null
+          smoking_status: string | null
           updated_at: string
           user_id: string
           weight: number | null
@@ -97,12 +108,23 @@ export type Database = {
         Insert: {
           age?: number | null
           allergies?: string[] | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
           bmi?: number | null
+          cholesterol_hdl?: number | null
+          cholesterol_ldl?: number | null
+          cholesterol_total?: number | null
           created_at?: string
+          diabetes_status?: string | null
+          exercise_frequency?: string | null
+          family_heart_disease?: boolean | null
+          fasting_blood_sugar?: number | null
           full_name?: string | null
           health_conditions?: string[] | null
           height?: number | null
           id?: string
+          medications?: string[] | null
+          smoking_status?: string | null
           updated_at?: string
           user_id: string
           weight?: number | null
@@ -110,12 +132,23 @@ export type Database = {
         Update: {
           age?: number | null
           allergies?: string[] | null
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
           bmi?: number | null
+          cholesterol_hdl?: number | null
+          cholesterol_ldl?: number | null
+          cholesterol_total?: number | null
           created_at?: string
+          diabetes_status?: string | null
+          exercise_frequency?: string | null
+          family_heart_disease?: boolean | null
+          fasting_blood_sugar?: number | null
           full_name?: string | null
           health_conditions?: string[] | null
           height?: number | null
           id?: string
+          medications?: string[] | null
+          smoking_status?: string | null
           updated_at?: string
           user_id?: string
           weight?: number | null
