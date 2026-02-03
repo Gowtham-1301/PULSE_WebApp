@@ -2,3 +2,6 @@ project_id = "nbwhgynmqsakfffetnjq"
 
 [functions.health-insights]
 verify_jwt = false
+
+[functions.risk-fusion]
+verify_jwt = false
