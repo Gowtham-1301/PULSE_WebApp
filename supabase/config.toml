@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.risk-fusion]
 verify_jwt = false
+
+[functions.convert-model]
+verify_jwt = false
+
+[functions.load-tfjs-model]
+verify_jwt = false
