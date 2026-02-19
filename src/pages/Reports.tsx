@@ -112,6 +112,7 @@ const Reports = ({ onNavigate }: ReportsProps) => {
       },
       riskLevel: (session.risk_level as 'low' | 'moderate' | 'high') || 'low',
       suggestions: session.suggestions || [],
+      // ecgData and riskFusion not stored in DB — waveform will show "no data" placeholder
     };
   };
 
