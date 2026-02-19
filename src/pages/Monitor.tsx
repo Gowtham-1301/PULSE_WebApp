@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Download, Heart, Save, Loader2, FileText, Activity, Upload } from 'lucide-react';
+import { Play, Pause, RotateCcw, Download, Heart, Save, Loader2, FileText, Activity, Upload, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
@@ -22,6 +23,7 @@ import HeartRateGauge from '@/components/ecg/HeartRateGauge';
 import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
 import RiskFusionPanel from '@/components/ecg/RiskFusionPanel';
+import MLModelUploader from '@/components/ecg/MLModelUploader';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
 import { useRiskFusion } from '@/hooks/useRiskFusion';
 import { useProfile } from '@/hooks/useProfile';
@@ -29,6 +31,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { generateSessionPDF, SessionReport } from '@/lib/pdfExport';
+import { predict, isModelLoaded } from '@/lib/tensorflowModel';
 
 interface MonitorProps {
   onNavigate: (page: string) => void;
@@ -44,6 +47,9 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
   const [sessionName, setSessionName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isModelReady, setIsModelReady] = useState(false);
+  const [mlClassification, setMlClassification] = useState<{ label: string; confidence: number; probabilities: Record<string, number> } | null>(null);
+  const mlPredictionRef = useRef<NodeJS.Timeout | null>(null);
   const sessionStartRef = useRef<Date | null>(null);
   const metricsHistoryRef = useRef<{
     heartRates: number[];
@@ -57,6 +63,27 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
   const { data, peaks, metrics, classification, riskLevel, resetData } = useECGSimulation(isRecording);
   const { result: riskFusionResult, isLoading: isCalculatingRisk, calculateRisk } = useRiskFusion();
   const { getClinicalProfile, getCompleteness } = useProfile();
+
+  // Run real-time ML prediction every 500ms when model is loaded and recording
+  useEffect(() => {
+    if (!isRecording || !isModelReady || !isModelLoaded()) {
+      if (mlPredictionRef.current) clearInterval(mlPredictionRef.current);
+      return;
+    }
+    mlPredictionRef.current = setInterval(async () => {
+      if (data.length < 360) return;
+      const segment = data.slice(-360).map(d => d.value);
+      const result = await predict(segment);
+      if (result) setMlClassification(result);
+    }, 500);
+    return () => { if (mlPredictionRef.current) clearInterval(mlPredictionRef.current); };
+  }, [isRecording, isModelReady, data]);
+
+  // Use ML classification if available, otherwise fall back to simulation
+  const activeClassification = (isModelReady && mlClassification)
+    ? { label: mlClassification.label, confidence: mlClassification.confidence, details: 'Real-time CNN-LSTM prediction from your trained model' }
+    : classification;
+
 
   // Calculate fused risk when metrics stabilize (every 10 seconds during recording)
   useEffect(() => {
@@ -434,9 +461,9 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
             {/* Analysis Panels */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ClassificationPanel
-                label={classification.label}
-                confidence={classification.confidence}
-                details={classification.details}
+                label={activeClassification.label}
+                confidence={activeClassification.confidence}
+                details={activeClassification.details}
               />
               <SuggestionsPanel
                 riskLevel={riskLevel}
@@ -524,16 +551,35 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
               </div>
             )}
 
-            {/* Model Info */}
-            <div className="rounded-xl border border-accent/30 bg-accent/5 p-4">
-              <h4 className="font-display font-semibold text-sm mb-2 text-accent">
-                AI Model Active
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                CNN-LSTM Hybrid Model v2.1 analyzing cardiac patterns in real-time.
-                Latency: &lt;300ms
-              </p>
-            </div>
+            {/* ML Model Uploader */}
+            <MLModelUploader onModelReady={(ready) => setIsModelReady(ready)} />
+
+            {/* ML Prediction Probabilities */}
+            {isModelReady && mlClassification && (
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-4 h-4 text-primary" />
+                  <h4 className="font-display font-semibold text-sm">Model Output</h4>
+                  <Badge className="ml-auto bg-primary/20 text-primary border-primary/30 text-xs">Live</Badge>
+                </div>
+                {Object.entries(mlClassification.probabilities).map(([label, prob]) => (
+                  <div key={label} className="space-y-0.5">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">{label}</span>
+                      <span className={label === mlClassification.label ? 'text-primary font-bold' : 'text-muted-foreground'}>
+                        {prob.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted/30 rounded-full h-1">
+                      <div
+                        className={`h-1 rounded-full transition-all duration-300 ${label === mlClassification.label ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+                        style={{ width: `${Math.min(100, prob)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
           </>

@@ -16,7 +16,7 @@ const DEFAULT_LABELS = ['Normal', 'SVEB', 'VEB', 'Fusion', 'Unknown'];
 
 let model: tf.LayersModel | null = null;
 let modelConfig: ECGModelConfig = {
-  inputShape: [250, 1], // 1 second at 250Hz, 1 channel
+  inputShape: [360, 1], // 1 second at 360Hz (MIT-BIH native rate)
   classLabels: DEFAULT_LABELS,
 };
 
