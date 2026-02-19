@@ -252,6 +252,9 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
         },
         riskLevel,
         suggestions: getSuggestions(),
+        riskFusion: riskFusionResult,
+        ecgData: data.slice(-750), // last 3 seconds at 250Hz
+        peakTimes: peaks.map(p => p.time),
       };
 
       await generateSessionPDF(report);
