@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Calendar, Clock, Heart, Download, ChevronRight, Filter, Trash2, Loader2 } from 'lucide-react';
+import SessionTrendCharts from '@/components/ecg/SessionTrendCharts';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
 import RiskIndicator from '@/components/ecg/RiskIndicator';
@@ -123,6 +124,11 @@ const History = ({ onNavigate }: HistoryProps) => {
             </p>
           </div>
         </div>
+
+        {/* Trend Charts */}
+        {!loading && sessions.length >= 2 && (
+          <SessionTrendCharts sessions={sessions} />
+        )}
 
         {/* Loading state */}
         {loading && (
