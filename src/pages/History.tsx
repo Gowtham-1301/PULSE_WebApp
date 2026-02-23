@@ -1,296 +1,300 @@
 import { useState } from 'react';
-import { Calendar, Clock, Heart, Download, ChevronRight, Filter } from 'lucide-react';
+import { Calendar, Clock, Heart, Download, ChevronRight, Filter, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
 import RiskIndicator from '@/components/ecg/RiskIndicator';
 import { cn } from '@/lib/utils';
+import { useSessionHistory } from '@/hooks/useSessionHistory';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 interface HistoryProps {
   onNavigate: (page: string) => void;
 }
 
-// Mock history data
-const mockSessions = [
-  {
-    id: '1',
-    date: '2026-01-21',
-    time: '09:30 AM',
-    duration: '12:34',
-    heartRateAvg: 72,
-    classification: 'Normal Sinus Rhythm',
-    confidence: 94.5,
-    riskLevel: 'low' as const,
-  },
-  {
-    id: '2',
-    date: '2026-01-20',
-    time: '08:15 AM',
-    duration: '15:22',
-    heartRateAvg: 78,
-    classification: 'Normal Sinus Rhythm',
-    confidence: 92.1,
-    riskLevel: 'low' as const,
-  },
-  {
-    id: '3',
-    date: '2026-01-19',
-    time: '10:00 AM',
-    duration: '08:45',
-    heartRateAvg: 85,
-    classification: 'Sinus Tachycardia',
-    confidence: 87.3,
-    riskLevel: 'moderate' as const,
-  },
-  {
-    id: '4',
-    date: '2026-01-18',
-    time: '07:45 AM',
-    duration: '20:00',
-    heartRateAvg: 68,
-    classification: 'Normal Sinus Rhythm',
-    confidence: 96.2,
-    riskLevel: 'low' as const,
-  },
-  {
-    id: '5',
-    date: '2026-01-17',
-    time: '09:00 AM',
-    duration: '11:15',
-    heartRateAvg: 75,
-    classification: 'Normal Sinus Rhythm',
-    confidence: 93.8,
-    riskLevel: 'low' as const,
-  },
-];
-
 const History = ({ onNavigate }: HistoryProps) => {
+  const { user } = useAuth();
+  const { sessions, loading, deleteSession } = useSessionHistory();
+  const { toast } = useToast();
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [filterRisk, setFilterRisk] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredSessions = filterRisk
-    ? mockSessions.filter(s => s.riskLevel === filterRisk)
-    : mockSessions;
+    ? sessions.filter(s => s.risk_level === filterRisk)
+    : sessions;
 
-  const getRiskColor = (risk: string) => {
+  const getRiskColor = (risk: string | null) => {
     switch (risk) {
-      case 'low':
-        return 'text-risk-low';
-      case 'moderate':
-        return 'text-risk-moderate';
-      case 'high':
-        return 'text-risk-high';
-      default:
-        return 'text-muted-foreground';
+      case 'low': return 'text-risk-low';
+      case 'moderate': return 'text-risk-moderate';
+      case 'high': return 'text-risk-high';
+      default: return 'text-muted-foreground';
     }
   };
+
+  const formatSessionDuration = (start: string, end: string | null) => {
+    if (!end) return '--:--';
+    const ms = new Date(end).getTime() - new Date(start).getTime();
+    const totalSecs = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeletingId(id);
+    const { error } = await deleteSession(id);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Delete failed', description: error.message });
+    } else {
+      toast({ title: 'Session deleted' });
+      if (selectedSession === id) setSelectedSession(null);
+    }
+    setDeletingId(null);
+  };
+
+  const avgHeartRate = sessions.length > 0
+    ? Math.round(sessions.reduce((a, s) => a + (Number(s.heart_rate_avg) || 0), 0) / sessions.filter(s => s.heart_rate_avg).length || 0)
+    : 0;
+
+  if (!user) {
+    return (
+      <div className="min-h-screen gradient-cyber">
+        <Header onNavigate={onNavigate} currentPage="history" />
+        <main className="container py-16 text-center">
+          <p className="text-muted-foreground text-lg">Please sign in to view your session history.</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen gradient-cyber">
       <Header onNavigate={onNavigate} currentPage="history" />
 
       <main className="container py-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <h2 className="font-display text-3xl font-bold">Session History</h2>
-            <p className="text-muted-foreground mt-1">
-              Review and analyze your past ECG recordings
-            </p>
+            <p className="text-muted-foreground mt-1">Review and analyze your past ECG recordings</p>
           </div>
-
-          {/* Filter buttons */}
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground" />
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'text-sm',
-                !filterRisk && 'bg-primary/10 text-primary'
-              )}
-              onClick={() => setFilterRisk(null)}
-            >
-              All
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'text-sm',
-                filterRisk === 'low' && 'bg-risk-low/10 text-risk-low'
-              )}
-              onClick={() => setFilterRisk('low')}
-            >
-              Low Risk
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'text-sm',
-                filterRisk === 'moderate' && 'bg-risk-moderate/10 text-risk-moderate'
-              )}
-              onClick={() => setFilterRisk('moderate')}
-            >
-              Moderate
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                'text-sm',
-                filterRisk === 'high' && 'bg-risk-high/10 text-risk-high'
-              )}
-              onClick={() => setFilterRisk('high')}
-            >
-              High Risk
-            </Button>
+            {[null, 'low', 'moderate', 'high'].map((risk) => (
+              <Button
+                key={risk ?? 'all'}
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'text-sm',
+                  filterRisk === risk && (risk === null ? 'bg-primary/10 text-primary' : `bg-risk-${risk}/10 text-risk-${risk}`)
+                )}
+                onClick={() => setFilterRisk(risk)}
+              >
+                {risk === null ? 'All' : risk === 'low' ? 'Low Risk' : risk === 'moderate' ? 'Moderate' : 'High Risk'}
+              </Button>
+            ))}
           </div>
         </div>
 
-        {/* Stats Overview */}
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="rounded-lg border border-border/50 bg-card/80 p-4">
             <p className="text-sm text-muted-foreground mb-1">Total Sessions</p>
-            <p className="text-2xl font-display font-bold">{mockSessions.length}</p>
+            <p className="text-2xl font-display font-bold">{sessions.length}</p>
           </div>
           <div className="rounded-lg border border-border/50 bg-card/80 p-4">
             <p className="text-sm text-muted-foreground mb-1">Avg Heart Rate</p>
-            <p className="text-2xl font-display font-bold text-primary">
-              {Math.round(mockSessions.reduce((a, b) => a + b.heartRateAvg, 0) / mockSessions.length)} BPM
-            </p>
+            <p className="text-2xl font-display font-bold text-primary">{avgHeartRate || '--'} BPM</p>
           </div>
           <div className="rounded-lg border border-risk-low/30 bg-risk-low/5 p-4">
             <p className="text-sm text-muted-foreground mb-1">Normal Sessions</p>
             <p className="text-2xl font-display font-bold text-risk-low">
-              {mockSessions.filter(s => s.riskLevel === 'low').length}
+              {sessions.filter(s => s.risk_level === 'low').length}
             </p>
           </div>
           <div className="rounded-lg border border-risk-moderate/30 bg-risk-moderate/5 p-4">
             <p className="text-sm text-muted-foreground mb-1">Flagged Sessions</p>
             <p className="text-2xl font-display font-bold text-risk-moderate">
-              {mockSessions.filter(s => s.riskLevel !== 'low').length}
+              {sessions.filter(s => s.risk_level && s.risk_level !== 'low').length}
             </p>
           </div>
         </div>
 
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        )}
+
         {/* Sessions List */}
-        <div className="space-y-4">
-          {filteredSessions.map((session) => (
-            <div
-              key={session.id}
-              className={cn(
-                'rounded-xl border bg-card/80 backdrop-blur-sm transition-all duration-300 cursor-pointer',
-                selectedSession === session.id
-                  ? 'border-primary/50 glow-primary'
-                  : 'border-border/50 hover:border-primary/30'
-              )}
-              onClick={() => setSelectedSession(session.id === selectedSession ? null : session.id)}
-            >
-              {/* Session Header */}
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-4">
-                  {/* Date/Time */}
-                  <div className="flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-muted/50">
-                    <Calendar className="w-4 h-4 text-primary mb-1" />
-                    <span className="text-xs font-mono">{session.date.split('-').slice(1).join('/')}</span>
-                  </div>
-
-                  {/* Session Info */}
-                  <div>
-                    <h4 className="font-display font-semibold text-lg">
-                      {session.classification}
-                    </h4>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {session.time}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" />
-                        {session.heartRateAvg} BPM
-                      </span>
-                      <span>Duration: {session.duration}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right side */}
-                <div className="flex items-center gap-4">
-                  <div className="text-right hidden md:block">
-                    <p className="text-sm text-muted-foreground">Confidence</p>
-                    <p className={cn('font-mono font-bold', getRiskColor(session.riskLevel))}>
-                      {session.confidence}%
-                    </p>
-                  </div>
-                  
-                  <div className={cn(
-                    'px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider',
-                    session.riskLevel === 'low' && 'bg-risk-low/10 text-risk-low',
-                    session.riskLevel === 'moderate' && 'bg-risk-moderate/10 text-risk-moderate'
-                  )}>
-                    {session.riskLevel}
-                  </div>
-
-                  <ChevronRight className={cn(
-                    'w-5 h-5 text-muted-foreground transition-transform duration-300',
-                    selectedSession === session.id && 'rotate-90'
-                  )} />
-                </div>
-              </div>
-
-              {/* Expanded Details */}
-              {selectedSession === session.id && (
-                <div className="border-t border-border/30 p-4 animate-fade-in-up">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h5 className="font-display font-semibold text-sm mb-3 uppercase tracking-wider">
-                        Session Details
-                      </h5>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Heart Rate (Avg)</span>
-                          <span className="font-mono">{session.heartRateAvg} BPM</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Duration</span>
-                          <span className="font-mono">{session.duration}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Classification</span>
-                          <span className="text-primary">{session.classification}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Confidence</span>
-                          <span className="font-mono">{session.confidence}%</span>
+        {!loading && (
+          <div className="space-y-4">
+            {filteredSessions.map((session) => {
+              const riskLevel = (session.risk_level as 'low' | 'moderate' | 'high') || 'low';
+              return (
+                <div
+                  key={session.id}
+                  className={cn(
+                    'rounded-xl border bg-card/80 backdrop-blur-sm transition-all duration-300 cursor-pointer',
+                    selectedSession === session.id
+                      ? 'border-primary/50 glow-primary'
+                      : 'border-border/50 hover:border-primary/30'
+                  )}
+                  onClick={() => setSelectedSession(session.id === selectedSession ? null : session.id)}
+                >
+                  <div className="flex items-center justify-between p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-muted/50">
+                        <Calendar className="w-4 h-4 text-primary mb-1" />
+                        <span className="text-xs font-mono">{format(new Date(session.start_time), 'MM/dd')}</span>
+                      </div>
+                      <div>
+                        <h4 className="font-display font-semibold text-lg">
+                          {session.session_name || session.classification || 'ECG Session'}
+                        </h4>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {format(new Date(session.start_time), 'hh:mm a')}
+                          </span>
+                          {session.heart_rate_avg && (
+                            <span className="flex items-center gap-1">
+                              <Heart className="w-3 h-3" />
+                              {Math.round(Number(session.heart_rate_avg))} BPM
+                            </span>
+                          )}
+                          <span>Duration: {formatSessionDuration(session.start_time, session.end_time)}</span>
                         </div>
                       </div>
                     </div>
 
-                    <div>
-                      <RiskIndicator level={session.riskLevel} size="sm" />
-                      
-                      <div className="mt-4 flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 border-primary/30 text-primary hover:bg-primary/10"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Export Report
-                        </Button>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right hidden md:block">
+                        <p className="text-sm text-muted-foreground">Confidence</p>
+                        <p className={cn('font-mono font-bold', getRiskColor(session.risk_level))}>
+                          {session.confidence_score ? `${Number(session.confidence_score).toFixed(1)}%` : '--'}
+                        </p>
                       </div>
+                      <div className={cn(
+                        'px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider',
+                        riskLevel === 'low' && 'bg-risk-low/10 text-risk-low',
+                        riskLevel === 'moderate' && 'bg-risk-moderate/10 text-risk-moderate',
+                        riskLevel === 'high' && 'bg-risk-high/10 text-risk-high'
+                      )}>
+                        {riskLevel}
+                      </div>
+                      <ChevronRight className={cn(
+                        'w-5 h-5 text-muted-foreground transition-transform duration-300',
+                        selectedSession === session.id && 'rotate-90'
+                      )} />
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
 
-        {filteredSessions.length === 0 && (
+                  {selectedSession === session.id && (
+                    <div className="border-t border-border/30 p-4 animate-fade-in-up">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <h5 className="font-display font-semibold text-sm mb-3 uppercase tracking-wider">Session Details</h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Heart Rate (Avg)</span>
+                              <span className="font-mono">{session.heart_rate_avg ? `${Math.round(Number(session.heart_rate_avg))} BPM` : '--'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">HR Range</span>
+                              <span className="font-mono">
+                                {session.heart_rate_min && session.heart_rate_max
+                                  ? `${Math.round(Number(session.heart_rate_min))} – ${Math.round(Number(session.heart_rate_max))} BPM`
+                                  : '--'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Duration</span>
+                              <span className="font-mono">{formatSessionDuration(session.start_time, session.end_time)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Classification</span>
+                              <span className="text-primary">{session.classification || '--'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Confidence</span>
+                              <span className="font-mono">{session.confidence_score ? `${Number(session.confidence_score).toFixed(1)}%` : '--'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">HRV (SDNN)</span>
+                              <span className="font-mono">{session.hrv_sdnn ? `${Number(session.hrv_sdnn).toFixed(1)} ms` : '--'}</span>
+                            </div>
+                            {session.notes && (
+                              <div className="pt-2 border-t border-border/30">
+                                <span className="text-muted-foreground">Notes</span>
+                                <p className="mt-1 text-xs">{session.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
+                          <RiskIndicator level={riskLevel} size="sm" />
+
+                          {session.suggestions && session.suggestions.length > 0 && (
+                            <div className="mt-4">
+                              <h5 className="font-display font-semibold text-sm mb-2 uppercase tracking-wider">Suggestions</h5>
+                              <ul className="space-y-1 text-xs text-muted-foreground">
+                                {session.suggestions.map((s, i) => (
+                                  <li key={i} className="flex items-start gap-2">
+                                    <span className="text-primary mt-0.5">•</span>
+                                    {s}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          <div className="mt-4 flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 border-primary/30 text-primary hover:bg-primary/10"
+                            >
+                              <Download className="w-4 h-4 mr-2" />
+                              Export Report
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                              onClick={(e) => handleDelete(session.id, e)}
+                              disabled={deletingId === session.id}
+                            >
+                              {deletingId === session.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && filteredSessions.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-muted-foreground">No sessions found with the selected filter.</p>
+            <p className="text-muted-foreground">
+              {sessions.length === 0
+                ? 'No sessions recorded yet. Start a recording in the Live Monitor to see your history here.'
+                : 'No sessions found with the selected filter.'}
+            </p>
           </div>
         )}
       </main>
