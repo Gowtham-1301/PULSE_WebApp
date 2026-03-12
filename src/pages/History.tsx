@@ -313,8 +313,14 @@ const History = ({ onNavigate }: HistoryProps) => {
                               variant="outline"
                               size="sm"
                               className="flex-1 border-primary/30 text-primary hover:bg-primary/10"
+                              onClick={(e) => handleExportSession(session, e)}
+                              disabled={exportingId === session.id}
                             >
-                              <Download className="w-4 h-4 mr-2" />
+                              {exportingId === session.id ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4 mr-2" />
+                              )}
                               Export Report
                             </Button>
                             <Button
