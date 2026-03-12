@@ -1,4 +1,5 @@
-import { Activity, LogOut, User, Settings } from 'lucide-react';
+import { useState } from 'react';
+import { Activity, LogOut, User, Settings, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,8 +16,21 @@ interface HeaderProps {
   currentPage?: string;
 }
 
+const NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'monitor', label: 'Live Monitor' },
+  { id: 'history', label: 'History' },
+  { id: 'reports', label: 'Reports' },
+];
+
 const Header = ({ onNavigate, currentPage }: HeaderProps) => {
   const { user, signOut } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleNav = (id: string) => {
+    onNavigate?.(id);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/50 bg-background/80 backdrop-blur-xl">
@@ -24,7 +38,7 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
         {/* Logo */}
         <div
           className="flex items-center gap-3 cursor-pointer"
-          onClick={() => onNavigate?.('dashboard')}
+          onClick={() => handleNav('dashboard')}
         >
           <div className="relative">
             <Activity className="w-8 h-8 text-primary" />
@@ -40,14 +54,9 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-1">
-          {[
-            { id: 'dashboard', label: 'Dashboard' },
-            { id: 'monitor', label: 'Live Monitor' },
-            { id: 'history', label: 'History' },
-            { id: 'reports', label: 'Reports' },
-          ].map((item) => (
+          {NAV_ITEMS.map((item) => (
             <Button
               key={item.id}
               variant="ghost"
@@ -58,15 +67,26 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
                   ? 'text-primary bg-primary/10'
                   : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
               )}
-              onClick={() => onNavigate?.(item.id)}
+              onClick={() => handleNav(item.id)}
             >
               {item.label}
             </Button>
           ))}
         </nav>
 
-        {/* User menu */}
+        {/* Right side: mobile hamburger + user menu */}
         <div className="flex items-center gap-2">
+          {/* Mobile hamburger */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-muted-foreground"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </Button>
+
+          {/* User menu */}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -85,11 +105,11 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
                   <p className="text-xs text-muted-foreground">Active Session</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onNavigate?.('profile')}>
+                <DropdownMenuItem onClick={() => handleNav('profile')}>
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onNavigate?.('settings')}>
+                <DropdownMenuItem onClick={() => handleNav('settings')}>
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </DropdownMenuItem>
@@ -105,13 +125,36 @@ const Header = ({ onNavigate, currentPage }: HeaderProps) => {
               variant="outline"
               size="sm"
               className="border-primary/30 text-primary hover:bg-primary/10"
-              onClick={() => onNavigate?.('auth')}
+              onClick={() => handleNav('auth')}
             >
               Sign In
             </Button>
           )}
         </div>
       </div>
+
+      {/* Mobile Navigation Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-border/50 bg-background/95 backdrop-blur-xl">
+          <nav className="container py-3 flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => (
+              <Button
+                key={item.id}
+                variant="ghost"
+                className={cn(
+                  'w-full justify-start text-sm font-mono uppercase tracking-wider',
+                  currentPage === item.id
+                    ? 'text-primary bg-primary/10'
+                    : 'text-muted-foreground hover:text-primary hover:bg-primary/5'
+                )}
+                onClick={() => handleNav(item.id)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };
