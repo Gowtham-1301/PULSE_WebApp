@@ -9,6 +9,7 @@ import { useSessionHistory } from '@/hooks/useSessionHistory';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { generateSessionPDF, SessionReport } from '@/lib/pdfExport';
 
 interface HistoryProps {
   onNavigate: (page: string) => void;
