@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Calendar, Clock, Heart, Download, ChevronRight, Filter, Trash2, Loader2 } from 'lucide-react';
+import { Calendar, Clock, Heart, Download, ChevronRight, Filter, Trash2, Loader2, FileText } from 'lucide-react';
 import SessionTrendCharts from '@/components/ecg/SessionTrendCharts';
 import { Button } from '@/components/ui/button';
 import Header from '@/components/layout/Header';
