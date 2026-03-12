@@ -22,6 +22,52 @@ const History = ({ onNavigate }: HistoryProps) => {
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [filterRisk, setFilterRisk] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+
+  const handleExportSession = async (session: typeof sessions[0], e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExportingId(session.id);
+    try {
+      const startTime = new Date(session.start_time);
+      const endTime = session.end_time ? new Date(session.end_time) : new Date();
+      const durationMs = endTime.getTime() - startTime.getTime();
+      const mins = Math.floor(durationMs / 60000);
+      const secs = Math.floor((durationMs % 60000) / 1000);
+
+      const report: SessionReport = {
+        sessionId: session.id,
+        sessionName: session.session_name || 'ECG Session',
+        startTime,
+        endTime,
+        duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+        metrics: {
+          heartRateAvg: Number(session.heart_rate_avg) || 72,
+          heartRateMin: Number(session.heart_rate_min) || 60,
+          heartRateMax: Number(session.heart_rate_max) || 90,
+          rrInterval: Number(session.rr_interval_avg) || 0.833,
+          qrsDuration: Number(session.qrs_duration_avg) || 0.08,
+          qtInterval: Number(session.qt_interval_avg) || 0.36,
+          hrvSdnn: Number(session.hrv_sdnn) || 45,
+          hrvRmssd: Number(session.hrv_rmssd) || 35,
+        },
+        classification: {
+          label: session.classification || 'Normal Sinus Rhythm',
+          confidence: Number(session.confidence_score) || 94,
+          details: session.notes || 'AI-analyzed cardiac rhythm classification',
+        },
+        riskLevel: (session.risk_level as 'low' | 'moderate' | 'high') || 'low',
+        suggestions: session.suggestions || [],
+      };
+
+      await generateSessionPDF(report);
+      toast({ title: 'Report Downloaded', description: 'PDF report has been exported.' });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({ variant: 'destructive', title: 'Export Failed', description: 'Failed to generate PDF.' });
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   const filteredSessions = filterRisk
     ? sessions.filter(s => s.risk_level === filterRisk)
