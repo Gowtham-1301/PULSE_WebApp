@@ -18,7 +18,7 @@ import ECGWaveform from '@/components/ecg/ECGWaveform';
 import MetricCard from '@/components/ecg/MetricCard';
 import RiskIndicator from '@/components/ecg/RiskIndicator';
 import ClassificationPanel from '@/components/ecg/ClassificationPanel';
-import SuggestionsPanel from '@/components/ecg/SuggestionsPanel';
+import SmartRecommendations from '@/components/ecg/SmartRecommendations';
 import HeartRateGauge from '@/components/ecg/HeartRateGauge';
 import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
