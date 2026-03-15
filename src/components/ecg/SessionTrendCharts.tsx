@@ -16,6 +16,17 @@ interface SessionTrendChartsProps {
   sessions: ECGSession[];
 }
 
+const riskToScore = (risk: string | null): number | null => {
+  if (!risk) return null;
+  switch (risk) {
+    case 'low': return 20;
+    case 'moderate': return 50;
+    case 'high': return 75;
+    case 'critical': return 95;
+    default: return null;
+  }
+};
+
 const SessionTrendCharts = ({ sessions }: SessionTrendChartsProps) => {
   const chartData = useMemo(() => {
     return [...sessions]
@@ -29,6 +40,8 @@ const SessionTrendCharts = ({ sessions }: SessionTrendChartsProps) => {
         hrMax: Number(s.heart_rate_max) || null,
         hrvSdnn: s.hrv_sdnn ? Number(s.hrv_sdnn) : null,
         hrvRmssd: s.hrv_rmssd ? Number(s.hrv_rmssd) : null,
+        riskScore: riskToScore(s.risk_level),
+        confidence: s.confidence_score ? Number(s.confidence_score) : null,
       }));
   }, [sessions]);
 

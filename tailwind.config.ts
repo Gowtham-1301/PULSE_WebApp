@@ -65,6 +65,7 @@ export default {
           low: "hsl(var(--risk-low))",
           moderate: "hsl(var(--risk-moderate))",
           high: "hsl(var(--risk-high))",
+          critical: "hsl(var(--risk-critical))",
         },
         ecg: {
           primary: "hsl(var(--ecg-primary))",

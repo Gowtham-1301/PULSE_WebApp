@@ -50,7 +50,8 @@
     /* Risk level colors */
     --risk-low: 145 80% 45%;
     --risk-moderate: 45 100% 50%;
-    --risk-high: 0 100% 55%;
+    --risk-high: 25 100% 55%;
+    --risk-critical: 0 100% 55%;
     
     /* ECG waveform colors */
     --ecg-primary: 180 100% 60%;
