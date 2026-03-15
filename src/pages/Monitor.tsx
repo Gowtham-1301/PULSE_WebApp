@@ -482,7 +482,15 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
             </div>
 
             {/* Risk Indicator */}
-            <RiskIndicator level={riskLevel} size="lg" />
+            <RiskIndicator
+              level={riskLevel}
+              size="lg"
+              riskScore={riskFusionResult?.fusedRiskScore}
+              contributingFactors={riskFusionResult?.riskFactors.slice(0, 5).map((f, i) => ({
+                factor: f,
+                percentage: Math.max(10, 80 - i * 15),
+              }))}
+            />
 
             {/* Recording Status */}
             <div className="rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-4">
