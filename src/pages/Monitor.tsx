@@ -18,7 +18,7 @@ import ECGWaveform from '@/components/ecg/ECGWaveform';
 import MetricCard from '@/components/ecg/MetricCard';
 import RiskIndicator from '@/components/ecg/RiskIndicator';
 import ClassificationPanel from '@/components/ecg/ClassificationPanel';
-import SuggestionsPanel from '@/components/ecg/SuggestionsPanel';
+import SmartRecommendations from '@/components/ecg/SmartRecommendations';
 import HeartRateGauge from '@/components/ecg/HeartRateGauge';
 import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
@@ -465,10 +465,11 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
                 confidence={activeClassification.confidence}
                 details={activeClassification.details}
               />
-              <SuggestionsPanel
+              <SmartRecommendations
                 riskLevel={riskLevel}
                 heartRate={metrics.heartRate}
                 hrvSdnn={metrics.hrvSdnn}
+                classification={classification.label}
               />
             </div>
           </div>
@@ -481,7 +482,15 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
             </div>
 
             {/* Risk Indicator */}
-            <RiskIndicator level={riskLevel} size="lg" />
+            <RiskIndicator
+              level={riskLevel}
+              size="lg"
+              riskScore={riskFusionResult?.fusedRiskScore}
+              contributingFactors={riskFusionResult?.riskFactors.slice(0, 5).map((f, i) => ({
+                factor: f,
+                percentage: Math.max(10, 80 - i * 15),
+              }))}
+            />
 
             {/* Recording Status */}
             <div className="rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-4">
