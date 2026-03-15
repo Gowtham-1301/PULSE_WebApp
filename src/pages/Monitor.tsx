@@ -465,10 +465,11 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
                 confidence={activeClassification.confidence}
                 details={activeClassification.details}
               />
-              <SuggestionsPanel
+              <SmartRecommendations
                 riskLevel={riskLevel}
                 heartRate={metrics.heartRate}
                 hrvSdnn={metrics.hrvSdnn}
+                classification={classification.label}
               />
             </div>
           </div>
