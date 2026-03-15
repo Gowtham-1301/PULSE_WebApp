@@ -209,6 +209,70 @@ const SessionTrendCharts = ({ sessions }: SessionTrendChartsProps) => {
           </span>
         </div>
       </div>
+      {/* Risk Score Trend */}
+      <div className="lg:col-span-2 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-5">
+        <h3 className="font-display font-semibold text-sm uppercase tracking-wider mb-4 text-foreground">
+          Risk Score Progression
+        </h3>
+        <div className="h-[200px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+              <defs>
+                <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="hsl(25, 100%, 55%)" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="hsl(25, 100%, 55%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 30%, 15%)" />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: 'hsl(180, 20%, 60%)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                stroke="hsl(220, 30%, 15%)"
+              />
+              <YAxis
+                domain={[0, 100]}
+                tick={{ fill: 'hsl(180, 20%, 60%)', fontSize: 11, fontFamily: 'JetBrains Mono' }}
+                stroke="hsl(220, 30%, 15%)"
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <ReferenceLine y={25} stroke="hsl(145, 80%, 45%)" strokeDasharray="6 4" strokeOpacity={0.3} label={{ value: 'LOW', fill: 'hsl(145, 80%, 45%)', fontSize: 9, position: 'insideTopLeft' }} />
+              <ReferenceLine y={50} stroke="hsl(45, 100%, 50%)" strokeDasharray="6 4" strokeOpacity={0.3} label={{ value: 'MOD', fill: 'hsl(45, 100%, 50%)', fontSize: 9, position: 'insideTopLeft' }} />
+              <ReferenceLine y={75} stroke="hsl(0, 100%, 55%)" strokeDasharray="6 4" strokeOpacity={0.3} label={{ value: 'HIGH', fill: 'hsl(0, 100%, 55%)', fontSize: 9, position: 'insideTopLeft' }} />
+              <Area
+                type="monotone"
+                dataKey="riskScore"
+                stroke="hsl(25, 100%, 55%)"
+                strokeWidth={2}
+                fill="url(#riskGradient)"
+                name="Risk Score"
+                dot={{ r: 3, fill: 'hsl(25, 100%, 55%)', strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: 'hsl(25, 100%, 55%)', stroke: 'hsl(220, 20%, 6%)', strokeWidth: 2 }}
+                connectNulls
+              />
+              {chartData.some(d => d.confidence !== null) && (
+                <Line
+                  type="monotone"
+                  dataKey="confidence"
+                  stroke="hsl(180, 100%, 50%)"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 2"
+                  name="Confidence"
+                  dot={{ r: 2, fill: 'hsl(180, 100%, 50%)', strokeWidth: 0 }}
+                  connectNulls
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ background: 'hsl(25, 100%, 55%)' }} /> Risk Score
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-6 h-px" style={{ background: 'hsl(180, 100%, 50%)' }} /> Confidence %
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
