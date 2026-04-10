@@ -35,7 +35,7 @@ interface UseHealthInsightsParams {
     label: string;
     confidence: number;
   };
-  riskLevel: 'low' | 'moderate' | 'high';
+  riskLevel: 'low' | 'moderate' | 'high' | 'critical';
   profile?: UserProfile;
   historicalAvgHR?: number;
 }
