@@ -10,7 +10,7 @@ interface ECGDataPoint {
 interface ECGWaveformProps {
   data: ECGDataPoint[];
   peaks?: Peak[];
-  riskLevel?: 'low' | 'moderate' | 'high';
+  riskLevel?: 'low' | 'moderate' | 'high' | 'critical';
   showPeaks?: boolean;
 }
 

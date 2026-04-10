@@ -17,7 +17,7 @@ interface AIHealthInsightsProps {
     label: string;
     confidence: number;
   };
-  riskLevel: 'low' | 'moderate' | 'high';
+  riskLevel: 'low' | 'moderate' | 'high' | 'critical';
   profile?: {
     age?: number;
     bmi?: number;

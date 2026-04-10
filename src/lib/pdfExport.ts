@@ -22,7 +22,7 @@ export interface SessionReport {
     confidence: number;
     details: string;
   };
-  riskLevel: 'low' | 'moderate' | 'high';
+  riskLevel: 'low' | 'moderate' | 'high' | 'critical';
   suggestions: string[];
   riskFusion?: RiskFusionResult | null;
   ecgData?: { time: number; value: number }[];
