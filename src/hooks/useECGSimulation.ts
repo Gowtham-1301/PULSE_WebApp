@@ -98,7 +98,7 @@ export const useECGSimulation = (isRecording: boolean = false) => {
     confidence: 94.5,
     details: 'Regular rhythm with consistent P-QRS-T morphology',
   });
-  const [riskLevel, setRiskLevel] = useState<'low' | 'moderate' | 'high'>('low');
+  const [riskLevel, setRiskLevel] = useState<'low' | 'moderate' | 'high' | 'critical'>('low');
   
   const timeRef = useRef(0);
   const heartRateRef = useRef(72);
@@ -147,19 +147,26 @@ export const useECGSimulation = (isRecording: boolean = false) => {
           hrvRmssd: hrv.rmssd >= 0 ? parseFloat(hrv.rmssd.toFixed(1)) : prev.hrvRmssd,
         }));
         
-        // Update classification based on heart rate
-        if (hr < 60) {
+        // Update classification based on heart rate — 9-class labels
+        if (hr < 55) {
           setClassification({
-            label: 'Sinus Bradycardia',
-            confidence: 89 + Math.random() * 5,
-            details: 'Slower than normal heart rate, regular rhythm',
+            label: 'Bradycardia',
+            confidence: 85 + Math.random() * 10,
+            details: 'Heart rate below 60 BPM detected',
           });
           setRiskLevel('moderate');
-        } else if (hr > 100) {
+        } else if (hr > 110) {
           setClassification({
-            label: 'Sinus Tachycardia',
-            confidence: 87 + Math.random() * 6,
-            details: 'Faster than normal heart rate, regular rhythm',
+            label: 'Tachycardia',
+            confidence: 83 + Math.random() * 10,
+            details: 'Heart rate above 100 BPM detected',
+          });
+          setRiskLevel('moderate');
+        } else if (hrv.sdnn >= 0 && hrv.sdnn < 15) {
+          setClassification({
+            label: 'SVEB',
+            confidence: 75 + Math.random() * 12,
+            details: 'Supraventricular ectopic beat pattern detected',
           });
           setRiskLevel('moderate');
         } else {

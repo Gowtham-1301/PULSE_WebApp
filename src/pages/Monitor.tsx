@@ -23,6 +23,7 @@ import HeartRateGauge from '@/components/ecg/HeartRateGauge';
 import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
 import RiskFusionPanel from '@/components/ecg/RiskFusionPanel';
+import UncertaintyDisplay from '@/components/ecg/UncertaintyDisplay';
 import MLModelUploader from '@/components/ecg/MLModelUploader';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
 import { useRiskFusion } from '@/hooks/useRiskFusion';
@@ -31,7 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { generateSessionPDF, SessionReport } from '@/lib/pdfExport';
-import { predict, isModelLoaded } from '@/lib/tensorflowModel';
+import { predict, isModelLoaded, simulatePrediction } from '@/lib/tensorflowModel';
 
 interface MonitorProps {
   onNavigate: (page: string) => void;
@@ -465,13 +466,23 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
                 confidence={activeClassification.confidence}
                 details={activeClassification.details}
               />
-              <SmartRecommendations
-                riskLevel={riskLevel}
-                heartRate={metrics.heartRate}
-                hrvSdnn={metrics.hrvSdnn}
-                classification={classification.label}
+              <UncertaintyDisplay
+                probabilities={
+                  mlClassification?.probabilities ||
+                  simulatePrediction(metrics.heartRate, metrics.hrvSdnn).probabilities
+                }
+                uncertainty={simulatePrediction(metrics.heartRate, metrics.hrvSdnn).uncertainty}
+                predictedLabel={activeClassification.label}
               />
             </div>
+
+            {/* Smart Recommendations */}
+            <SmartRecommendations
+              riskLevel={riskLevel}
+              heartRate={metrics.heartRate}
+              hrvSdnn={metrics.hrvSdnn}
+              classification={activeClassification.label}
+            />
           </div>
 
           {/* Right Sidebar */}

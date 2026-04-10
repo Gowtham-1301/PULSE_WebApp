@@ -45,7 +45,7 @@ interface RiskFusionRequest {
 }
 
 interface RiskFusionResponse {
-  finalRiskLevel: 'low' | 'moderate' | 'high';
+  finalRiskLevel: 'low' | 'moderate' | 'high' | 'critical';
   ecgRiskScore: number;
   clinicalRiskScore: number;
   fusedRiskScore: number;
@@ -94,11 +94,16 @@ function calculateECGRisk(metrics: ECGMetrics, classification: ECGClassification
     factors.push('Prolonged QTc interval');
   }
 
-  // Classification-based risk
-  const abnormalPatterns = ['Atrial Fibrillation', 'Ventricular Tachycardia', 'AV Block', 'ST Elevation'];
-  if (abnormalPatterns.some(p => classification.label.toLowerCase().includes(p.toLowerCase()))) {
-    score += 30 * (classification.confidence / 100);
-    factors.push(`AI detected: ${classification.label}`);
+  // Classification-based risk using model's base risk mapping
+  const baseRiskMap: Record<string, number> = {
+    'Normal Sinus Rhythm': 5, 'Atrial Fibrillation': 25, 'SVEB': 30,
+    'VEB': 50, 'Ventricular Tachycardia': 70, 'STEMI': 95,
+    'LBBB': 40, 'Bradycardia': 15, 'Tachycardia': 20,
+  };
+  const baseRisk = baseRiskMap[classification.label] ?? 0;
+  if (baseRisk > 0) {
+    score += baseRisk * (classification.confidence / 100);
+    factors.push(`AI detected: ${classification.label} (base risk ${baseRisk})`);
   }
 
   // Confidence adjustment
@@ -277,7 +282,7 @@ function fuseRisks(
 
 // Generate clinical recommendations
 function generateRecommendations(
-  riskLevel: 'low' | 'moderate' | 'high',
+  riskLevel: 'low' | 'moderate' | 'high' | 'critical',
   factors: string[],
   profile: ClinicalProfile
 ): string[] {
@@ -345,8 +350,10 @@ serve(async (req) => {
     );
 
     // Determine risk level
-    let finalRiskLevel: 'low' | 'moderate' | 'high';
-    if (fusedScore >= 60) {
+    let finalRiskLevel: 'low' | 'moderate' | 'high' | 'critical';
+    if (fusedScore >= 80) {
+      finalRiskLevel = 'critical';
+    } else if (fusedScore >= 60) {
       finalRiskLevel = 'high';
     } else if (fusedScore >= 30) {
       finalRiskLevel = 'moderate';
