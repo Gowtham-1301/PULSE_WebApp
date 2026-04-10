@@ -4,6 +4,14 @@ export interface ModelPrediction {
   label: string;
   confidence: number;
   probabilities: Record<string, number>;
+  uncertainty?: UncertaintyEstimate;
+}
+
+export interface UncertaintyEstimate {
+  epistemic: number;
+  aleatoric: number;
+  total: number;
+  confidenceInterval95: { lower: number; upper: number };
 }
 
 export interface ECGModelConfig {
@@ -11,33 +19,50 @@ export interface ECGModelConfig {
   classLabels: string[];
 }
 
-// Default class labels for ECG classification
-const DEFAULT_LABELS = ['Normal', 'SVEB', 'VEB', 'Fusion', 'Unknown'];
+// 9-class labels matching the TCN-BiLSTM-Attention model
+const DEFAULT_LABELS = [
+  'Normal Sinus Rhythm',
+  'Atrial Fibrillation',
+  'SVEB',
+  'VEB',
+  'Ventricular Tachycardia',
+  'STEMI',
+  'LBBB',
+  'Bradycardia',
+  'Tachycardia',
+];
+
+// Base risk per class for risk fusion
+export const CLASS_BASE_RISK: Record<string, number> = {
+  'Normal Sinus Rhythm': 5,
+  'Atrial Fibrillation': 25,
+  'SVEB': 30,
+  'VEB': 50,
+  'Ventricular Tachycardia': 70,
+  'STEMI': 95,
+  'LBBB': 40,
+  'Bradycardia': 15,
+  'Tachycardia': 20,
+};
 
 let model: tf.LayersModel | null = null;
 let modelConfig: ECGModelConfig = {
-  inputShape: [360, 1], // 1 second at 360Hz (MIT-BIH native rate)
+  inputShape: [360, 1],
   classLabels: DEFAULT_LABELS,
 };
 
 export const loadModelFromFile = async (file: File): Promise<boolean> => {
   try {
-    // Handle .h5 or folder upload (model.json + weights)
     if (file.name.endsWith('.json')) {
-      // Load from JSON + weights
       const modelUrl = URL.createObjectURL(file);
       model = await tf.loadLayersModel(modelUrl);
       URL.revokeObjectURL(modelUrl);
     } else if (file.name.endsWith('.h5')) {
-      // For .h5 files, we need to convert them first
-      // This requires the model to be converted to TensorFlow.js format
       throw new Error('Please convert your .h5 model to TensorFlow.js format using tensorflowjs_converter');
     }
-    
     console.log('Model loaded successfully');
     console.log('Input shape:', model?.inputs[0].shape);
     console.log('Output shape:', model?.outputs[0].shape);
-    
     return true;
   } catch (error) {
     console.error('Error loading model:', error);
@@ -79,9 +104,7 @@ export const saveModelToIndexedDB = async (modelName: string = 'ecg-model'): Pro
   }
 };
 
-export const isModelLoaded = (): boolean => {
-  return model !== null;
-};
+export const isModelLoaded = (): boolean => model !== null;
 
 export const setModelConfig = (config: Partial<ECGModelConfig>): void => {
   modelConfig = { ...modelConfig, ...config };
@@ -90,44 +113,33 @@ export const setModelConfig = (config: Partial<ECGModelConfig>): void => {
 export const getModelConfig = (): ECGModelConfig => modelConfig;
 
 export const preprocessECGData = (data: number[]): tf.Tensor => {
-  // Normalize data to 0-1 range
   const min = Math.min(...data);
   const max = Math.max(...data);
   const range = max - min || 1;
   const normalized = data.map(v => (v - min) / range);
-  
-  // Reshape to match model input
+
   const targetLength = modelConfig.inputShape[0];
-  
-  // Resample if necessary
-  let resampled: number[];
-  if (normalized.length !== targetLength) {
-    resampled = resampleSignal(normalized, targetLength);
-  } else {
-    resampled = normalized;
-  }
-  
-  // Create tensor with correct shape [batch, timesteps, channels]
+  const resampled = normalized.length !== targetLength
+    ? resampleSignal(normalized, targetLength)
+    : normalized;
+
   return tf.tensor3d([resampled.map(v => [v])]);
 };
 
 const resampleSignal = (signal: number[], targetLength: number): number[] => {
   const result: number[] = [];
   const ratio = (signal.length - 1) / (targetLength - 1);
-  
   for (let i = 0; i < targetLength; i++) {
     const pos = i * ratio;
     const low = Math.floor(pos);
     const high = Math.ceil(pos);
     const weight = pos - low;
-    
     if (high >= signal.length) {
       result.push(signal[signal.length - 1]);
     } else {
       result.push(signal[low] * (1 - weight) + signal[high] * weight);
     }
   }
-  
   return result;
 };
 
@@ -136,26 +148,22 @@ export const predict = async (ecgData: number[]): Promise<ModelPrediction | null
     console.error('Model not loaded');
     return null;
   }
-  
   try {
     const inputTensor = preprocessECGData(ecgData);
     const prediction = model.predict(inputTensor) as tf.Tensor;
     const probabilities = await prediction.data();
-    
-    // Clean up tensors
     inputTensor.dispose();
     prediction.dispose();
-    
-    // Find max probability and corresponding label
+
     const maxIdx = probabilities.indexOf(Math.max(...Array.from(probabilities)));
     const label = modelConfig.classLabels[maxIdx] || 'Unknown';
     const confidence = probabilities[maxIdx] * 100;
-    
+
     const probs: Record<string, number> = {};
-    modelConfig.classLabels.forEach((label, idx) => {
-      probs[label] = (probabilities[idx] || 0) * 100;
+    modelConfig.classLabels.forEach((l, idx) => {
+      probs[l] = (probabilities[idx] || 0) * 100;
     });
-    
+
     return { label, confidence, probabilities: probs };
   } catch (error) {
     console.error('Prediction error:', error);
@@ -170,33 +178,43 @@ export const disposeModel = (): void => {
   }
 };
 
-// Simulated prediction for when no model is loaded
+// Simulated prediction for when no model is loaded — now 9-class
 export const simulatePrediction = (
   heartRate: number,
   hrvSdnn: number
 ): ModelPrediction => {
-  // Simple rule-based simulation
-  let label = 'Normal';
+  let label = 'Normal Sinus Rhythm';
   let confidence = 92 + Math.random() * 6;
-  
-  if (heartRate < 60) {
-    label = 'SVEB';
+
+  if (heartRate < 55) {
+    label = 'Bradycardia';
     confidence = 85 + Math.random() * 10;
-  } else if (heartRate > 100) {
-    label = 'VEB';
-    confidence = 80 + Math.random() * 12;
+  } else if (heartRate > 110) {
+    label = 'Tachycardia';
+    confidence = 83 + Math.random() * 10;
   } else if (hrvSdnn < 20) {
-    label = 'Fusion';
+    label = 'SVEB';
     confidence = 75 + Math.random() * 15;
   }
-  
-  const probabilities: Record<string, number> = {
-    Normal: label === 'Normal' ? confidence : (100 - confidence) / 4,
-    SVEB: label === 'SVEB' ? confidence : (100 - confidence) / 4,
-    VEB: label === 'VEB' ? confidence : (100 - confidence) / 4,
-    Fusion: label === 'Fusion' ? confidence : (100 - confidence) / 4,
-    Unknown: 1,
+
+  const probabilities: Record<string, number> = {};
+  const remaining = 100 - confidence;
+  modelConfig.classLabels.forEach(l => {
+    probabilities[l] = l === label ? confidence : remaining / (modelConfig.classLabels.length - 1);
+  });
+
+  // Simulated uncertainty
+  const epistemic = 0.05 + Math.random() * 0.15;
+  const aleatoric = 0.03 + Math.random() * 0.1;
+  const uncertainty: UncertaintyEstimate = {
+    epistemic,
+    aleatoric,
+    total: epistemic + aleatoric,
+    confidenceInterval95: {
+      lower: Math.max(0, confidence - 15 - Math.random() * 10),
+      upper: Math.min(100, confidence + 5 + Math.random() * 5),
+    },
   };
-  
-  return { label, confidence, probabilities };
+
+  return { label, confidence, probabilities, uncertainty };
 };
