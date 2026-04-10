@@ -47,95 +47,158 @@ const generateRecommendations = (
   classification: string
 ): Recommendation[] => {
   const recs: Recommendation[] = [];
+  const cl = classification.toLowerCase();
 
+  // STEMI or VT → URGENT
+  if (cl.includes('stemi') || cl.includes('ventricular tachycardia')) {
+    recs.push({
+      id: 'urg-1', type: 'urgent', priority: 'critical',
+      title: 'Seek Immediate Medical Attention',
+      description: 'Life-threatening arrhythmia or acute heart attack pattern detected.',
+      explanation: `Classification: ${classification}. This requires emergency evaluation.`,
+      timeframe: 'Immediately — call 911',
+      evidence: 'AHA/ACC STEMI & VT Management Guidelines',
+    });
+    recs.push({
+      id: 'urg-2', type: 'urgent', priority: 'critical',
+      title: 'Call Emergency Services',
+      description: 'Do not delay — go to the nearest emergency department.',
+      explanation: 'Prompt intervention significantly improves survival outcomes.',
+      timeframe: 'Now',
+    });
+  }
+
+  // High/critical risk score
   if (riskLevel === 'critical' || riskLevel === 'high') {
     recs.push({
-      id: 'urgent-1',
-      type: 'urgent',
-      priority: 'critical',
-      title: 'Seek Clinical Evaluation',
-      description: 'Schedule an appointment with a cardiologist for a comprehensive cardiac evaluation.',
-      explanation: `Your ECG classification (${classification}) combined with elevated risk indicators warrants professional assessment.`,
-      timeframe: 'Within 24-48 hours',
-      evidence: 'ACC/AHA 2023 Guidelines for ECG abnormality follow-up',
+      id: 'diag-urg', type: 'diagnostic', priority: 'high',
+      title: 'Schedule Urgent 12-Lead ECG',
+      description: 'High risk indicators require confirmatory diagnostic testing.',
+      explanation: `Risk level: ${riskLevel.toUpperCase()}. Classification: ${classification}.`,
+      timeframe: 'Within 24 hours',
+      evidence: 'ACC/AHA 2023 ECG abnormality follow-up guidelines',
     });
   }
 
+  // Atrial Fibrillation
+  if (cl.includes('atrial fibrillation')) {
+    recs.push({
+      id: 'diag-af', type: 'diagnostic', priority: 'high',
+      title: 'Schedule 12-Lead ECG for AF Confirmation',
+      description: 'Confirm atrial fibrillation with a full diagnostic ECG.',
+      explanation: 'AF increases stroke risk; early confirmation enables anticoagulation decisions.',
+      timeframe: 'Within 24 hours',
+      evidence: 'ESC 2020 AF Guidelines',
+    });
+    recs.push({
+      id: 'med-af', type: 'medication', priority: 'high',
+      title: 'Discuss Anticoagulation Therapy',
+      description: 'Consult cardiologist about blood thinners to reduce stroke risk.',
+      explanation: 'AF is associated with 5x increased stroke risk; anticoagulation is first-line.',
+      timeframe: 'Urgent',
+      evidence: 'CHA₂DS₂-VASc scoring, ESC 2020',
+    });
+  }
+
+  // Tachycardia
   if (heartRate > 100) {
     recs.push({
-      id: 'diag-1',
-      type: 'diagnostic',
-      priority: riskLevel === 'high' ? 'high' : 'medium',
+      id: 'diag-tachy', type: 'diagnostic', priority: riskLevel === 'high' ? 'high' : 'medium',
       title: 'Evaluate Tachycardia',
-      description: 'Heart rate exceeds 100 BPM. Consider thyroid panel, CBC, and electrolyte screening.',
-      explanation: `Current HR: ${heartRate} BPM. Persistent tachycardia may indicate underlying conditions including anemia, hyperthyroidism, or dehydration.`,
+      description: 'Consider thyroid panel, CBC, and electrolyte screening.',
+      explanation: `HR: ${heartRate} BPM. Persistent tachycardia may indicate anemia, hyperthyroidism, or dehydration.`,
       timeframe: 'Within 1 week',
-      evidence: 'ESC Guidelines on Supraventricular Tachycardia 2019',
+      evidence: 'ESC SVT Guidelines 2019',
     });
   }
 
+  // Bradycardia
   if (heartRate < 50) {
     recs.push({
-      id: 'diag-2',
-      type: 'diagnostic',
-      priority: 'high',
+      id: 'diag-brady', type: 'diagnostic', priority: 'high',
       title: 'Evaluate Bradycardia',
-      description: 'Heart rate below 50 BPM. Assess for conduction abnormalities.',
-      explanation: `Current HR: ${heartRate} BPM. May indicate AV block or sinus node dysfunction unless athletic baseline.`,
+      description: 'Assess for conduction abnormalities or sinus node dysfunction.',
+      explanation: `HR: ${heartRate} BPM. May indicate AV block unless athletic baseline.`,
       timeframe: 'Within 48 hours',
       evidence: 'AHA/ACC Bradycardia Guidelines 2018',
     });
   }
 
-  recs.push({
-    id: 'mon-1',
-    type: 'monitoring',
-    priority: riskLevel === 'low' ? 'low' : 'medium',
-    title: 'Continue ECG Monitoring',
-    description: 'Maintain regular ECG recordings to track cardiac rhythm over time.',
-    explanation: 'Serial ECG recordings help establish baseline patterns and detect early changes in cardiac rhythm.',
-    timeframe: 'Ongoing — daily or weekly',
-    evidence: 'NICE CG108 — Chronic heart disease monitoring',
-  });
-
-  if (hrvSdnn < 30) {
+  // VEB / SVEB
+  if (cl.includes('veb') || cl.includes('sveb')) {
     recs.push({
-      id: 'life-1',
-      type: 'lifestyle',
-      priority: 'medium',
-      title: 'Improve Heart Rate Variability',
-      description: 'Practice deep breathing exercises (4-7-8 technique) and ensure 7-9 hours of quality sleep.',
-      explanation: `Your HRV SDNN is ${hrvSdnn.toFixed(0)} ms (low). Low HRV is associated with increased cardiovascular risk and autonomic imbalance.`,
-      timeframe: 'Start immediately — reassess in 2 weeks',
-      evidence: 'Shaffer & Ginsberg, 2017 — HRV review in Frontiers in Public Health',
+      id: 'mon-ect', type: 'monitoring', priority: 'medium',
+      title: 'Monitor Ectopic Beat Frequency',
+      description: 'Track the frequency and patterns of ectopic beats over time.',
+      explanation: 'Isolated ectopic beats are often benign but increased burden warrants follow-up.',
+      timeframe: 'Ongoing',
+      evidence: 'ACC/AHA PVC Management 2017',
+    });
+    recs.push({
+      id: 'med-ect', type: 'medication', priority: 'medium',
+      title: 'Consider Beta-Blockers',
+      description: 'Discuss rate-control medication with your physician if symptomatic.',
+      explanation: 'Beta-blockers can suppress ectopic activity and reduce symptoms.',
+      timeframe: 'At next visit',
     });
   }
 
-  if (riskLevel === 'moderate' || riskLevel === 'high') {
+  // LBBB
+  if (cl.includes('lbbb')) {
     recs.push({
-      id: 'med-1',
-      type: 'medication',
-      priority: 'medium',
+      id: 'diag-lbbb', type: 'diagnostic', priority: 'high',
+      title: 'Echocardiogram Recommended',
+      description: 'Assess cardiac function and rule out underlying structural disease.',
+      explanation: 'New LBBB may indicate cardiomyopathy or ischemic heart disease.',
+      timeframe: 'Within 1 week',
+      evidence: 'ACC/AHA Heart Failure Guidelines 2022',
+    });
+  }
+
+  // Low HRV
+  if (hrvSdnn < 30) {
+    recs.push({
+      id: 'life-hrv', type: 'lifestyle', priority: 'medium',
+      title: 'Improve Heart Rate Variability',
+      description: 'Practice deep breathing (4-7-8 technique), ensure 7-9 hours of sleep.',
+      explanation: `HRV SDNN: ${hrvSdnn.toFixed(0)} ms (low). Low HRV is associated with increased CV risk.`,
+      timeframe: 'Start immediately — reassess in 2 weeks',
+      evidence: 'Shaffer & Ginsberg 2017, Frontiers in Public Health',
+    });
+  }
+
+  // Monitoring
+  recs.push({
+    id: 'mon-1', type: 'monitoring', priority: riskLevel === 'low' ? 'low' : 'medium',
+    title: 'Continue ECG Monitoring',
+    description: 'Maintain regular ECG recordings to track cardiac rhythm over time.',
+    explanation: 'Serial recordings establish baselines and detect early changes.',
+    timeframe: 'Ongoing',
+    evidence: 'NICE CG108',
+  });
+
+  // Medication review for moderate+
+  if (riskLevel === 'moderate' || riskLevel === 'high' || riskLevel === 'critical') {
+    recs.push({
+      id: 'med-rev', type: 'medication', priority: 'medium',
       title: 'Review Current Medications',
-      description: 'Discuss ECG findings with your prescribing physician to assess medication effects.',
-      explanation: 'Certain medications (beta-blockers, antiarrhythmics, QT-prolonging drugs) can affect ECG patterns.',
+      description: 'Discuss ECG findings with prescribing physician.',
+      explanation: 'Beta-blockers, antiarrhythmics, QT-prolonging drugs can affect ECG patterns.',
       timeframe: 'At next scheduled visit',
       evidence: 'CredibleMeds QT drug list — AZCERT',
     });
   }
 
+  // Lifestyle — always
   recs.push({
-    id: 'life-2',
-    type: 'lifestyle',
-    priority: 'low',
+    id: 'life-gen', type: 'lifestyle', priority: 'low',
     title: 'Maintain Heart-Healthy Lifestyle',
-    description: '150 min/week moderate aerobic exercise, balanced diet, limit caffeine and alcohol.',
-    explanation: 'Regular cardiovascular exercise strengthens the heart muscle and improves autonomic regulation.',
+    description: '150 min/week aerobic exercise, balanced diet, limit caffeine/alcohol.',
+    explanation: 'Regular exercise strengthens the heart and improves autonomic regulation.',
     timeframe: 'Ongoing',
     evidence: 'AHA Physical Activity Guidelines 2018',
   });
 
-  // Sort by priority
   const order: Record<PriorityLevel, number> = { critical: 0, high: 1, medium: 2, low: 3 };
   return recs.sort((a, b) => order[a.priority] - order[b.priority]);
 };
