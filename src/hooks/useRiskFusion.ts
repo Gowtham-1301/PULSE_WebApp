@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface RiskFusionResult {
-  finalRiskLevel: 'low' | 'moderate' | 'high';
+  finalRiskLevel: 'low' | 'moderate' | 'high' | 'critical';
   ecgRiskScore: number;
   clinicalRiskScore: number;
   fusedRiskScore: number;
