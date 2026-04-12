@@ -477,6 +477,13 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
               />
             </div>
 
+            {/* Attention Map */}
+            <AttentionMapDisplay
+              ecgData={data}
+              attentionWeights={attentionWeights}
+              classification={activeClassification.label}
+            />
+
             {/* Smart Recommendations */}
             <SmartRecommendations
               riskLevel={riskLevel}
