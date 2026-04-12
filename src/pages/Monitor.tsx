@@ -62,7 +62,7 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
     hrvRmssds: number[];
   }>({ heartRates: [], rrIntervals: [], qrsDurations: [], qtIntervals: [], hrvSdnns: [], hrvRmssds: [] });
   
-  const { data, peaks, metrics, classification, riskLevel, resetData } = useECGSimulation(isRecording);
+  const { data, peaks, metrics, classification, riskLevel, attentionWeights, resetData } = useECGSimulation(isRecording);
   const { result: riskFusionResult, isLoading: isCalculatingRisk, calculateRisk } = useRiskFusion();
   const { getClinicalProfile, getCompleteness } = useProfile();
 
