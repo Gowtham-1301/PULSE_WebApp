@@ -264,6 +264,7 @@ export const useECGSimulation = (isRecording: boolean = false) => {
     metrics,
     classification,
     riskLevel,
+    attentionWeights,
     resetData,
   };
 };
