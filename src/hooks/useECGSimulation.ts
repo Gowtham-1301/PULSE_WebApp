@@ -82,9 +82,54 @@ const calculateHRV = (rrIntervals: number[]): { sdnn: number; rmssd: number } =>
   return { sdnn, rmssd };
 };
 
+// Generate simulated attention weights for ECG morphological regions
+const generateAttentionWeights = (label: string): number[] => {
+  // 360 weights (one per sample in 1-second window)
+  const weights = new Array(360).fill(0);
+  
+  // Define attention patterns based on classification
+  const patterns: Record<string, { regions: [number, number, number][]; }> = {
+    'Normal Sinus Rhythm': { regions: [[70, 85, 0.6], [140, 170, 0.3], [20, 50, 0.2]] }, // R-peak, T-wave, P-wave
+    'Atrial Fibrillation': { regions: [[10, 60, 0.8], [70, 85, 0.5], [200, 260, 0.4]] }, // P-wave absence, R irregular
+    'SVEB': { regions: [[15, 55, 0.7], [70, 85, 0.5], [60, 70, 0.3]] }, // Premature P, R-peak, PR interval
+    'VEB': { regions: [[70, 100, 0.8], [100, 130, 0.5], [140, 180, 0.3]] }, // Wide QRS, ST segment
+    'Ventricular Tachycardia': { regions: [[70, 110, 0.9], [110, 140, 0.6], [140, 180, 0.4]] }, // Wide QRS dominant
+    'STEMI': { regions: [[100, 140, 0.9], [140, 180, 0.7], [70, 85, 0.3]] }, // ST elevation, T-wave
+    'LBBB': { regions: [[70, 110, 0.8], [110, 140, 0.5], [15, 50, 0.2]] }, // Wide QRS, notched R
+    'Bradycardia': { regions: [[70, 85, 0.5], [200, 300, 0.4], [15, 50, 0.3]] }, // R-peak, long baseline
+    'Tachycardia': { regions: [[70, 85, 0.6], [0, 20, 0.4], [140, 170, 0.3]] }, // R-peak, short intervals
+  };
+
+  const pattern = patterns[label] || patterns['Normal Sinus Rhythm'];
+  
+  // Apply gaussian-like attention for each region
+  for (const [center_start, center_end, peak_val] of pattern.regions) {
+    const center = (center_start + center_end) / 2;
+    const sigma = (center_end - center_start) / 2;
+    for (let i = 0; i < 360; i++) {
+      weights[i] += peak_val * Math.exp(-Math.pow(i - center, 2) / (2 * sigma * sigma));
+    }
+  }
+  
+  // Add small noise
+  for (let i = 0; i < 360; i++) {
+    weights[i] += Math.random() * 0.05;
+    weights[i] = Math.max(0, weights[i]);
+  }
+  
+  // Normalize to [0, 1]
+  const maxW = Math.max(...weights);
+  if (maxW > 0) {
+    for (let i = 0; i < 360; i++) weights[i] /= maxW;
+  }
+  
+  return weights;
+};
+
 export const useECGSimulation = (isRecording: boolean = false) => {
   const [data, setData] = useState<ECGDataPoint[]>([]);
   const [peaks, setPeaks] = useState<Peak[]>([]);
+  const [attentionWeights, setAttentionWeights] = useState<number[]>([]);
   const [metrics, setMetrics] = useState<ECGMetrics>({
     heartRate: 72,
     rrInterval: 0.833,
@@ -149,33 +194,41 @@ export const useECGSimulation = (isRecording: boolean = false) => {
         
         // Update classification based on heart rate — 9-class labels
         if (hr < 55) {
+          const bradLabel = 'Bradycardia';
           setClassification({
-            label: 'Bradycardia',
+            label: bradLabel,
             confidence: 85 + Math.random() * 10,
             details: 'Heart rate below 60 BPM detected',
           });
           setRiskLevel('moderate');
+          setAttentionWeights(generateAttentionWeights(bradLabel));
         } else if (hr > 110) {
+          const tachLabel = 'Tachycardia';
           setClassification({
-            label: 'Tachycardia',
+            label: tachLabel,
             confidence: 83 + Math.random() * 10,
             details: 'Heart rate above 100 BPM detected',
           });
           setRiskLevel('moderate');
+          setAttentionWeights(generateAttentionWeights(tachLabel));
         } else if (hrv.sdnn >= 0 && hrv.sdnn < 15) {
+          const svebLabel = 'SVEB';
           setClassification({
-            label: 'SVEB',
+            label: svebLabel,
             confidence: 75 + Math.random() * 12,
             details: 'Supraventricular ectopic beat pattern detected',
           });
           setRiskLevel('moderate');
+          setAttentionWeights(generateAttentionWeights(svebLabel));
         } else {
+          const nsrLabel = 'Normal Sinus Rhythm';
           setClassification({
-            label: 'Normal Sinus Rhythm',
+            label: nsrLabel,
             confidence: 92 + Math.random() * 6,
             details: 'Regular rhythm with consistent P-QRS-T morphology',
           });
           setRiskLevel('low');
+          setAttentionWeights(generateAttentionWeights(nsrLabel));
         }
       }
       
@@ -211,6 +264,7 @@ export const useECGSimulation = (isRecording: boolean = false) => {
     metrics,
     classification,
     riskLevel,
+    attentionWeights,
     resetData,
   };
 };

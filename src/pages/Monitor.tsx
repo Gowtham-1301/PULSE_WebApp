@@ -24,6 +24,7 @@ import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
 import RiskFusionPanel from '@/components/ecg/RiskFusionPanel';
 import UncertaintyDisplay from '@/components/ecg/UncertaintyDisplay';
+import AttentionMapDisplay from '@/components/ecg/AttentionMapDisplay';
 import MLModelUploader from '@/components/ecg/MLModelUploader';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
 import { useRiskFusion } from '@/hooks/useRiskFusion';
@@ -61,7 +62,7 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
     hrvRmssds: number[];
   }>({ heartRates: [], rrIntervals: [], qrsDurations: [], qtIntervals: [], hrvSdnns: [], hrvRmssds: [] });
   
-  const { data, peaks, metrics, classification, riskLevel, resetData } = useECGSimulation(isRecording);
+  const { data, peaks, metrics, classification, riskLevel, attentionWeights, resetData } = useECGSimulation(isRecording);
   const { result: riskFusionResult, isLoading: isCalculatingRisk, calculateRisk } = useRiskFusion();
   const { getClinicalProfile, getCompleteness } = useProfile();
 
@@ -475,6 +476,13 @@ const Monitor = ({ onNavigate }: MonitorProps) => {
                 predictedLabel={activeClassification.label}
               />
             </div>
+
+            {/* Attention Map */}
+            <AttentionMapDisplay
+              ecgData={data}
+              attentionWeights={attentionWeights}
+              classification={activeClassification.label}
+            />
 
             {/* Smart Recommendations */}
             <SmartRecommendations
