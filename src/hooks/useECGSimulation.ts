@@ -203,26 +203,32 @@ export const useECGSimulation = (isRecording: boolean = false) => {
           setRiskLevel('moderate');
           setAttentionWeights(generateAttentionWeights(bradLabel));
         } else if (hr > 110) {
+          const tachLabel = 'Tachycardia';
           setClassification({
-            label: 'Tachycardia',
+            label: tachLabel,
             confidence: 83 + Math.random() * 10,
             details: 'Heart rate above 100 BPM detected',
           });
           setRiskLevel('moderate');
+          setAttentionWeights(generateAttentionWeights(tachLabel));
         } else if (hrv.sdnn >= 0 && hrv.sdnn < 15) {
+          const svebLabel = 'SVEB';
           setClassification({
-            label: 'SVEB',
+            label: svebLabel,
             confidence: 75 + Math.random() * 12,
             details: 'Supraventricular ectopic beat pattern detected',
           });
           setRiskLevel('moderate');
+          setAttentionWeights(generateAttentionWeights(svebLabel));
         } else {
+          const nsrLabel = 'Normal Sinus Rhythm';
           setClassification({
-            label: 'Normal Sinus Rhythm',
+            label: nsrLabel,
             confidence: 92 + Math.random() * 6,
             details: 'Regular rhythm with consistent P-QRS-T morphology',
           });
           setRiskLevel('low');
+          setAttentionWeights(generateAttentionWeights(nsrLabel));
         }
       }
       
