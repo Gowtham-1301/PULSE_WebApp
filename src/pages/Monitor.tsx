@@ -24,6 +24,7 @@ import AIHealthInsights from '@/components/ecg/AIHealthInsights';
 import CSVUploadAnalysis from '@/components/ecg/CSVUploadAnalysis';
 import RiskFusionPanel from '@/components/ecg/RiskFusionPanel';
 import UncertaintyDisplay from '@/components/ecg/UncertaintyDisplay';
+import AttentionMapDisplay from '@/components/ecg/AttentionMapDisplay';
 import MLModelUploader from '@/components/ecg/MLModelUploader';
 import { useECGSimulation } from '@/hooks/useECGSimulation';
 import { useRiskFusion } from '@/hooks/useRiskFusion';
