@@ -194,12 +194,14 @@ export const useECGSimulation = (isRecording: boolean = false) => {
         
         // Update classification based on heart rate — 9-class labels
         if (hr < 55) {
+          const bradLabel = 'Bradycardia';
           setClassification({
-            label: 'Bradycardia',
+            label: bradLabel,
             confidence: 85 + Math.random() * 10,
             details: 'Heart rate below 60 BPM detected',
           });
           setRiskLevel('moderate');
+          setAttentionWeights(generateAttentionWeights(bradLabel));
         } else if (hr > 110) {
           setClassification({
             label: 'Tachycardia',
